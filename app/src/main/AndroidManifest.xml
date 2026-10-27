@@ -12,8 +12,11 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY" />
+    <!-- M2Y Tools: equalizer -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <application android:label="@string/english_ime_name"
+    <application android:label="@string/tools_app_name"
             android:name="helium314.keyboard.latin.App"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -43,10 +46,22 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 android:theme="@style/platformActivityTheme"
                 android:icon="@mipmap/ic_launcher"
                 android:windowSoftInputMode="adjustResize"
+                android:exported="true" />
+
+        <!-- M2Y Tools: the single launcher entry; tabs Ekolayzır | Klavye -->
+        <activity android:name="com.m2y.eq.MainActivity"
+                android:label="@string/tools_app_name"
+                android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+                android:screenOrientation="sensorLandscape"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <!-- lets players open us from their "equalizer" button -->
+                <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
@@ -70,6 +85,15 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
             android:windowSoftInputMode="adjustResize|stateAlwaysVisible" android:configChanges="orientation|screenSize"/>
 
         <!-- Broadcast receivers -->
+        <service android:name="com.m2y.eq.EqService" android:exported="false" />
+
+        <receiver android:name="com.m2y.eq.BootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <receiver android:name="SystemBroadcastReceiver"
                 android:exported="true">
             <intent-filter>

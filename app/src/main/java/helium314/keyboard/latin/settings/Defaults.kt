@@ -68,7 +68,6 @@ object Defaults {
     // physical layout ignored https://github.com/HeliBorg/HeliBoard/issues/1957, https://github.com/HeliBorg/HeliBoard/issues/1949
     // physical layout ignored for uppercase letters only (?) https://github.com/HeliBorg/HeliBoard/issues/2030
     const val PREF_ENABLE_HARDWARE_KEYBOARD = false
-    const val PREF_SHOW_SETUP_WIZARD_ICON = true
     const val PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD = false
     const val PREF_SHOW_NUMBER_ROW_IN_SYMBOLS = true
     const val PREF_LOCALIZED_NUMBER_ROW = true

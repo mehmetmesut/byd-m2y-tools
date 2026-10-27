@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M2Y Tools: the equalizer (formerly M2Y EQ); the head unit runs in Turkish, so these are not translated -->
+<resources>
+    <string name="tools_app_name" translatable="false">M2Y Tools</string>
+    <string name="eq_slogan" translatable="false">BYD araçları için geliştirilmiştir</string>
+    <string name="eq_save_preset" translatable="false">M2Y\'ye kaydet</string>
+    <string name="eq_reset_preset" translatable="false">M2Y\'yi fabrika ayarına döndür</string>
+    <string name="eq_channel_name" translatable="false">Ekolayzır</string>
+    <string name="eq_notification_on" translatable="false">Ses ayarı uygulanıyor: %1$s</string>
+    <string name="eq_about_text" translatable="false">Geliştiren: Yeşil Dönüşüm Mühendisi - M2Y\n\nM2Y Tools, BYD Seal U DM-i multimedya ekranı (Android 10, 1920×1080, Infinity ses sistemi) için ekolayzırı ve M2Y Board klavyesini tek uygulamada toplar; herkesin kullanımına açıktır.\n\nEkolayzır tüm sistem sesine tek bir DynamicsProcessing efekti uygular: motorun gerçek frekans kutularına hizalı 25 bant, seçilebilir ses gücü, ön ayar yoğunluğu, eşit ses düzeyiyle karşılaştırma; sınırlayıcı yok; telefon görüşmesinde kendini kaldırır. Reklam, izleme ve internet erişimi yoktur.\n\nKaynak kodu ve duyurular: github.com/mehmetmesut/byd-m2y · byd.mehmetmesut.com\n\nBYD ile bağlantılı değildir.</string>
+    <string name="eq_error_effect" translatable="false">Ses efekti kurulamadı: %1$s</string>
+</resources>

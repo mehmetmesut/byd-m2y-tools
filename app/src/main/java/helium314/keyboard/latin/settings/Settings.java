@@ -64,7 +64,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_KEY_LONGPRESS_TIMEOUT = "key_longpress_timeout";
     public static final String PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = "enable_emoji_alt_physical_key";
     public static final String PREF_ENABLE_HARDWARE_KEYBOARD = "enable_hardware_keyboard";
-    public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD = "long_press_symbols_for_numpad";
 
     public static final String PREF_SHOW_NUMBER_ROW_IN_SYMBOLS = "show_number_row_in_symbols";
@@ -236,18 +235,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     public static boolean readFullscreenModeAllowed(final Resources res) {
         return res.getBoolean(R.bool.config_fullscreen_mode_allowed);
-    }
-
-    public static boolean readShowSetupWizardIcon(final SharedPreferences prefs,
-                                                  final Context context) {
-        if (!prefs.contains(PREF_SHOW_SETUP_WIZARD_ICON)) {
-            final ApplicationInfo appInfo = context.getApplicationInfo();
-            final boolean isApplicationInSystemImage =
-                    (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-            // Default value
-            return !isApplicationInSystemImage;
-        }
-        return prefs.getBoolean(PREF_SHOW_SETUP_WIZARD_ICON, Defaults.PREF_SHOW_SETUP_WIZARD_ICON);
     }
 
     public static boolean readHasHardwareKeyboard(final Configuration conf) {

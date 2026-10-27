@@ -68,7 +68,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         !UncachedInputMethodManagerUtils.isThisImeCurrent(this, imm)
                                 || !UncachedInputMethodManagerUtils.isThisImeEnabled(this, imm)
                     ) }
-                    SettingsNavHost(onClickBack = { this.finish() })
+                    SettingsNavHost(onClickBack = { this.finish() }, startDestination = intent?.getStringExtra(EXTRA_DESTINATION))
                     if (showWelcomeWizard) {
                         WelcomeWizard(close = { showWelcomeWizard = false }, finish = this::finish)
                     }
@@ -110,6 +110,9 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         // having it in a companion object is not ideal as it will stay in memory even after settings are closed
         // but it's small enough to not care
         lateinit var settingsContainer: SettingsContainer
+
+        /** M2Y Tools: the Klavye tab opens a screen directly (a [SettingsDestination] route) */
+        const val EXTRA_DESTINATION = "m2y_destination"
 
     }
 

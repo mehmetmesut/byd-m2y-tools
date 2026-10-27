@@ -56,43 +56,13 @@ public final class SystemBroadcastReceiver extends BroadcastReceiver {
         final String intentAction = intent.getAction();
         if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(intentAction)) {
             Log.i(TAG, "Package has been replaced: " + context.getPackageName());
-            toggleAppIcon(context);
         } else if (Intent.ACTION_BOOT_COMPLETED.equals(intentAction)) {
             Log.i(TAG, "Boot has been completed");
-            toggleAppIcon(context);
         } else if (Intent.ACTION_LOCALE_CHANGED.equals(intentAction)) {
             Log.i(TAG, "System locale changed");
             KeyboardLayoutSet.Companion.onSystemLocaleChanged();
         }
-
-        // The process that hosts this broadcast receiver is invoked and remains alive even after
-        // 1) the package has been re-installed,
-        // 2) the device has just booted,
-        // 3) a new user has been created.
-        // There is no good reason to keep the process alive if this IME isn't a current IME.
-        final InputMethodManager imm = (InputMethodManager)
-                context.getSystemService(Context.INPUT_METHOD_SERVICE);
-        // Called to check whether this IME has been triggered by the current user or not
-        final boolean isInputMethodManagerValidForUserOfThisProcess =
-                !imm.getInputMethodList().isEmpty();
-        final boolean isCurrentImeOfCurrentUser = isInputMethodManagerValidForUserOfThisProcess
-                && UncachedInputMethodManagerUtils.isThisImeCurrent(context, imm);
-        if (!isCurrentImeOfCurrentUser) {
-            final int myPid = Process.myPid();
-            Log.i(TAG, "Killing my process: pid=" + myPid);
-            Process.killProcess(myPid);
-        }
+        // M2Y Tools: the process also hosts the EQ service, so it is not killed when the keyboard is not the current IME
     }
 
-    public static void toggleAppIcon(final Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-            return; // can't change visibility in Android 10 and above
-        final SharedPreferences prefs = KtxKt.prefs(context);
-        context.getPackageManager().setComponentEnabledSetting(
-                new ComponentName(context, SettingsActivity.class),
-                Settings.readShowSetupWizardIcon(prefs, context)
-                        ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                        : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                PackageManager.DONT_KILL_APP);
-    }
 }
