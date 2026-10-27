@@ -5,12 +5,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.settings.screens.createAboutSettings
-import helium314.keyboard.settings.screens.createAppearanceSettings
-import helium314.keyboard.settings.screens.createCorrectionSettings
-import helium314.keyboard.settings.screens.createPreferencesSettings
-import helium314.keyboard.settings.screens.createToolbarSettings
 
 class SettingsContainer(context: Context) {
     private val list = createSettings(context)
@@ -60,24 +55,11 @@ class Setting(
 }
 
 // intentionally not putting individual debug settings in here so user knows the context
-private fun createSettings(context: Context) = createAboutSettings(context) + createAppearanceSettings(context) +
-        createCorrectionSettings(context) + createPreferencesSettings(context) + createToolbarSettings(context)
+private fun createSettings(context: Context) = createAboutSettings(context)
 
 object SettingsWithoutKey {
-    const val EDIT_PERSONAL_DICTIONARY = "edit_personal_dictionary"
     const val APP = "app"
     const val VERSION = "version"
     const val LICENSE = "license"
-    const val HIDDEN_FEATURES = "hidden_features"
     const val GITHUB = "github"
-    const val GITHUB_WIKI = "github_wiki"
-    const val COMMUNITY_LINKS = "community_links"
-    const val SAVE_LOG = "save_log"
-    const val BACKUP_RESTORE = "backup_restore"
-    const val DEBUG_SETTINGS = "screen_debug"
-    const val LOAD_GESTURE_LIB = "load_gesture_library"
-    const val BACKGROUND_IMAGE = "background_image"
-    const val BACKGROUND_IMAGE_LANDSCAPE = "background_image_landscape"
-    const val CUSTOM_FONT = "custom_font"
-    const val CUSTOM_EMOJI_FONT = "custom_emoji_font"
 }

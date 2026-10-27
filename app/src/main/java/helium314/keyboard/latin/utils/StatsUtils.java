@@ -29,9 +29,6 @@ public final class StatsUtils {
             final DictionaryFacilitator dictionaryFacilitator) {
     }
 
-    public static void onBackspaceWordDelete(int wordLength) {
-    }
-
     public static void onBackspacePressed(int lengthToDelete) {
     }
 
@@ -60,27 +57,22 @@ public final class StatsUtils {
     }
 
     public static void onAutoCorrection(final String typedWord, final String autoCorrectionWord,
-            final boolean isBatchInput, final DictionaryFacilitator dictionaryFacilitator,
-            final String prevWordsContext) {
+            final DictionaryFacilitator dictionaryFacilitator, final String prevWordsContext) {
     }
 
-    public static void onWordCommitUserTyped(final String commitWord, final boolean isBatchMode) {
+    public static void onWordCommitUserTyped(final String commitWord) {
     }
 
-    public static void onWordCommitAutoCorrect(final String commitWord, final boolean isBatchMode) {
+    public static void onWordCommitAutoCorrect(final String commitWord) {
     }
 
-    public static void onWordCommitSuggestionPickedManually(
-            final String commitWord, final boolean isBatchMode) {
+    public static void onWordCommitSuggestionPickedManually(final String commitWord) {
     }
 
     public static void onDoubleSpacePeriod() {
     }
 
     public static void onLoadSettings(SettingsValues settingsValues) {
-    }
-
-    public static void onInvalidWordIdentification(final String invalidWord) {
     }
 
     public static void onSubtypeChanged(final InputMethodSubtype oldSubtype,

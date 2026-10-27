@@ -7,56 +7,22 @@
 package helium314.keyboard.keyboard.internal;
 
 public final class TypingTimeRecorder {
-    private final int mStaticTimeThresholdAfterFastTyping; // msec
-    private final int mSuppressKeyPreviewAfterBatchInputDuration;
-    private long mLastTypingTime;
+    // M2Y Board: the former gesture parameter, now fixed
+    private static final int STATIC_TIME_THRESHOLD_AFTER_FAST_TYPING = 500; // msec
     private long mLastLetterTypingTime;
-    private long mLastBatchInputTime;
-
-    public TypingTimeRecorder(final int staticTimeThresholdAfterFastTyping,
-            final int suppressKeyPreviewAfterBatchInputDuration) {
-        mStaticTimeThresholdAfterFastTyping = staticTimeThresholdAfterFastTyping;
-        mSuppressKeyPreviewAfterBatchInputDuration = suppressKeyPreviewAfterBatchInputDuration;
-    }
 
     public boolean isInFastTyping(final long eventTime) {
         final long elapsedTimeSinceLastLetterTyping = eventTime - mLastLetterTypingTime;
-        return elapsedTimeSinceLastLetterTyping < mStaticTimeThresholdAfterFastTyping;
-    }
-
-    private boolean wasLastInputTyping() {
-        return mLastTypingTime >= mLastBatchInputTime;
+        return elapsedTimeSinceLastLetterTyping < STATIC_TIME_THRESHOLD_AFTER_FAST_TYPING;
     }
 
     public void onCodeInput(final int code, final long eventTime) {
         // Record the letter typing time when
-        // 1. Letter keys are typed successively without any batch input in between.
-        // 2. A letter key is typed within the threshold time since the last any key typing.
-        // 3. A non-letter key is typed within the threshold time since the last letter key typing.
-        if (Character.isLetter(code)) {
-            if (wasLastInputTyping()
-                    || eventTime - mLastTypingTime < mStaticTimeThresholdAfterFastTyping) {
-                mLastLetterTypingTime = eventTime;
-            }
-        } else {
-            if (eventTime - mLastLetterTypingTime < mStaticTimeThresholdAfterFastTyping) {
-                // This non-letter typing should be treated as a part of fast typing.
-                mLastLetterTypingTime = eventTime;
-            }
+        // 1. A letter key is typed.
+        // 2. A non-letter key is typed within the threshold time since the last letter key typing.
+        if (Character.isLetter(code)
+                || eventTime - mLastLetterTypingTime < STATIC_TIME_THRESHOLD_AFTER_FAST_TYPING) {
+            mLastLetterTypingTime = eventTime;
         }
-        mLastTypingTime = eventTime;
-    }
-
-    public void onEndBatchInput(final long eventTime) {
-        mLastBatchInputTime = eventTime;
-    }
-
-    public long getLastLetterTypingTime() {
-        return mLastLetterTypingTime;
-    }
-
-    public boolean needsToSuppressKeyPreviewPopup(final long eventTime) {
-        return !wasLastInputTyping()
-                && eventTime - mLastBatchInputTime < mSuppressKeyPreviewAfterBatchInputDuration;
     }
 }

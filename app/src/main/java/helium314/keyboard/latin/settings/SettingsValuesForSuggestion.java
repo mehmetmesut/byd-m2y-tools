@@ -9,13 +9,7 @@ package helium314.keyboard.latin.settings;
 public class SettingsValuesForSuggestion {
     public final boolean mBlockPotentiallyOffensive;
 
-    public SettingsValuesForSuggestion(
-            final boolean blockPotentiallyOffensive,
-            final boolean spaceAwareGesture
-            ) {
+    public SettingsValuesForSuggestion(final boolean blockPotentiallyOffensive) {
         mBlockPotentiallyOffensive = blockPotentiallyOffensive;
-        mSpaceAwareGesture = spaceAwareGesture;
     }
-
-    public final boolean mSpaceAwareGesture;
 }

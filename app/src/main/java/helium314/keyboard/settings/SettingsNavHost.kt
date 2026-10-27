@@ -17,16 +17,11 @@ import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.settings.SettingsSubtype.Companion.toSettingsSubtype
 import helium314.keyboard.latin.settings.getTransitionAnimationScale
 import helium314.keyboard.settings.screens.AboutScreen
-import helium314.keyboard.settings.screens.AppearanceScreen
-import helium314.keyboard.settings.screens.ColorsScreen
 import helium314.keyboard.settings.screens.LanguageScreen
 import helium314.keyboard.settings.screens.MainSettingsScreen
 import helium314.keyboard.settings.screens.PersonalDictionariesScreen
 import helium314.keyboard.settings.screens.PersonalDictionaryScreen
-import helium314.keyboard.settings.screens.PreferencesScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
-import helium314.keyboard.settings.screens.TextCorrectionScreen
-import helium314.keyboard.settings.screens.ToolbarScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -61,28 +56,13 @@ fun SettingsNavHost(
         composable(SettingsDestination.Settings) {
             MainSettingsScreen(
                 onClickAbout = { navController.navigate(SettingsDestination.About) },
-                onClickTextCorrection = { navController.navigate(SettingsDestination.TextCorrection) },
-                onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
-                onClickToolbar = { navController.navigate(SettingsDestination.Toolbar) },
-                onClickAppearance = { navController.navigate(SettingsDestination.Appearance) },
+                onClickPersonalDictionary = { navController.navigate(SettingsDestination.PersonalDictionaries) },
                 onClickLanguage = { navController.navigate(SettingsDestination.Languages) },
                 onClickBack = ::goBack,
             )
         }
         composable(SettingsDestination.About) {
             AboutScreen(onClickBack = ::goBack)
-        }
-        composable(SettingsDestination.TextCorrection) {
-            TextCorrectionScreen(onClickBack = ::goBack)
-        }
-        composable(SettingsDestination.Preferences) {
-            PreferencesScreen(onClickBack = ::goBack)
-        }
-        composable(SettingsDestination.Toolbar) {
-            ToolbarScreen(onClickBack = ::goBack)
-        }
-        composable(SettingsDestination.Appearance) {
-            AppearanceScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.PersonalDictionary + "{locale}") {
             val locale = it.arguments?.getString("locale")?.takeIf { loc -> loc.isNotBlank() }?.constructLocale()
@@ -97,12 +77,6 @@ fun SettingsNavHost(
         composable(SettingsDestination.Languages) {
             LanguageScreen(onClickBack = ::goBack)
         }
-        composable(SettingsDestination.Colors + "{theme}") {
-            ColorsScreen(isNight = false, theme = it.arguments?.getString("theme"), onClickBack = ::goBack)
-        }
-        composable(SettingsDestination.ColorsNight + "{theme}") {
-            ColorsScreen(isNight = true, theme = it.arguments?.getString("theme"), onClickBack = ::goBack)
-        }
         composable(SettingsDestination.Subtype + "{subtype}") {
             SubtypeScreen(initialSubtype = it.arguments?.getString("subtype")!!.toSettingsSubtype(), onClickBack = ::goBack)
         }
@@ -114,21 +88,10 @@ fun SettingsNavHost(
 object SettingsDestination {
     const val Settings = "settings"
     const val About = "about"
-    const val TextCorrection = "text_correction"
-    const val Preferences = "preferences"
-    const val Toolbar = "toolbar"
-    const val GestureTyping = "gesture_typing"
-    const val Advanced = "advanced"
-    const val Debug = "debug"
-    const val Appearance = "appearance"
-    const val Colors = "colors/"
-    const val ColorsNight = "colors_night/"
     const val PersonalDictionaries = "personal_dictionaries"
     const val PersonalDictionary = "personal_dictionary/"
     const val Languages = "languages"
     const val Subtype = "subtype/"
-    const val Layouts = "layouts"
-    const val Dictionaries = "dictionaries"
     val navTarget = MutableStateFlow(Settings)
 
     private val navScope = CoroutineScope(Dispatchers.Default)

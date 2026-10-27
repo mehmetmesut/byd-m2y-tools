@@ -105,48 +105,6 @@
         <attr name="backgroundDimAlpha" format="integer" />
         <!-- Popup keys keyboard will shown at touched point. -->
         <attr name="showPopupKeysKeyboardAtTouchedPoint" format="boolean" />
-        <!-- Minimum distance between gesture trail sampling points. -->
-        <attr name="gestureTrailMinSamplingDistance" format="dimension" />
-        <!-- Maximum angular threshold between gesture trail interpolation segments in degree. -->
-        <attr name="gestureTrailMaxInterpolationAngularThreshold" format="integer" />
-        <!-- Maximum distance threshold between gesture trail interpolation segments. -->
-        <attr name="gestureTrailMaxInterpolationDistanceThreshold" format="dimension" />
-        <!-- Maximum number of gesture trail interpolation segments. -->
-        <attr name="gestureTrailMaxInterpolationSegments" format="integer" />
-        <!-- Delay after gesture trail starts fading out in millisecond. -->
-        <attr name="gestureTrailFadeoutStartDelay" format="integer" />
-        <!-- Interval of updating gesture trail in millisecond. -->
-        <attr name="gestureTrailUpdateInterval" format="integer" />
-        <attr name="gestureTrailStartWidth" format="dimension" />
-        <attr name="gestureTrailEndWidth" format="dimension" />
-        <attr name="gestureTrailBodyRatio" format="integer" />
-        <attr name="gestureTrailShadowRatio" format="integer" />
-        <!-- Attributes for GestureFloatingPreviewText -->
-        <attr name="gestureFloatingPreviewTextSize" format="dimension" />
-        <attr name="gestureFloatingPreviewTextOffset" format="dimension" />
-        <attr name="gestureFloatingPreviewHorizontalPadding" format="dimension" />
-        <attr name="gestureFloatingPreviewVerticalPadding" format="dimension" />
-        <attr name="gestureFloatingPreviewRoundRadius" format="dimension" />
-        <!-- Static threshold for gesture after fast typing (msec) -->
-        <attr name="gestureStaticTimeThresholdAfterFastTyping" format="integer" />
-        <!-- Static threshold for starting gesture detection (keyWidth%/sec) -->
-        <attr name="gestureDetectFastMoveSpeedThreshold" format="fraction" />
-        <!-- Dynamic threshold for gesture after fast typing (msec) -->
-        <attr name="gestureDynamicThresholdDecayDuration" format="integer" />
-        <!-- Time based threshold values for gesture detection (msec) -->
-        <attr name="gestureDynamicTimeThresholdFrom" format="integer" />
-        <attr name="gestureDynamicTimeThresholdTo" format="integer" />
-        <!-- Distance based threshold values for gesture detection (keyWidth%/sec) -->
-        <attr name="gestureDynamicDistanceThresholdFrom" format="fraction" />
-        <attr name="gestureDynamicDistanceThresholdTo" format="fraction" />
-        <!-- Parameter for gesture sampling (keyWidth%/sec) -->
-        <attr name="gestureSamplingMinimumDistance" format="fraction" />
-        <!-- Parameters for gesture recognition (msec) and (keyWidth%/sec) -->
-        <attr name="gestureRecognitionMinimumTime" format="integer" />
-        <attr name="gestureRecognitionUpdateTime" format="integer" />
-        <attr name="gestureRecognitionSpeedThreshold" format="fraction" />
-        <!-- Suppress showing key preview duration after batch input in millisecond -->
-        <attr name="suppressKeyPreviewAfterBatchInputDuration" format="integer" />
     </declare-styleable>
 
     <declare-styleable name="PopupKeysKeyboardView">
@@ -355,9 +313,6 @@
         <attr name="passwordInput" format="boolean" />
         <attr name="clobberSettingsKey" format="boolean" />
         <attr name="hasShortcutKey" format="boolean" />
-        <attr name="languageSwitchKeyEnabled" format="boolean" />
-        <attr name="emojiKeyEnabled" format="boolean" />
-        <attr name="oneHandedModeEnabled" format="boolean" />
         <attr name="numberRowEnabled" format="boolean" />
         <attr name="isMultiLine" format="boolean" />
         <attr name="imeAction" format="enum">

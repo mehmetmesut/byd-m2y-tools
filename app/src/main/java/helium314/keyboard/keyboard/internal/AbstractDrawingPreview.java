@@ -16,7 +16,6 @@ import helium314.keyboard.keyboard.PointerTracker;
 
 /**
  * Abstract base class for previews that are drawn on DrawingPreviewPlacerView, e.g.,
- * GestureFloatingTextDrawingPreview, GestureTrailsDrawingPreview, and
  * SlidingKeyInputDrawingPreview.
  */
 public abstract class AbstractDrawingPreview {
@@ -48,8 +47,7 @@ public abstract class AbstractDrawingPreview {
      * The class that is overriding this method must call this super implementation.
      *
      * @param originCoords the top-left coordinates of the {@link MainKeyboardView} in
-     *        the input method window coordinate-system. This is unused but has a point in an
-     *        extended class, such as {@link GestureTrailsDrawingPreview}.
+     *        the input method window coordinate-system.
      * @param width the width of {@link MainKeyboardView}.
      * @param height the height of {@link MainKeyboardView}.
      */

@@ -79,23 +79,6 @@ public interface TimerProxy {
      */
     boolean popDoubleTapShiftKeyTimer();
 
-    /**
-     * Start a timer to fire updating batch input while <code>tracker</code> is on hold.
-     * @param tracker the {@link PointerTracker} that stops moving.
-     */
-    void startUpdateBatchInputTimer(@NonNull PointerTracker tracker);
-
-    /**
-     * Cancel a timer of firing updating batch input.
-     * @param tracker the {@link PointerTracker} that resumes moving or ends gesture input.
-     */
-    void cancelUpdateBatchInputTimer(@NonNull PointerTracker tracker);
-
-    /**
-     * Cancel all timers of firing updating batch input.
-     */
-    void cancelAllUpdateBatchInputTimers();
-
     class Adapter implements TimerProxy {
         @Override
         public void startTypingStateTimer(@NonNull Key typedKey) {}
@@ -120,11 +103,5 @@ public interface TimerProxy {
         public void cancelDoubleTapShiftKeyTimer() {}
         @Override
         public boolean popDoubleTapShiftKeyTimer() { return false; }
-        @Override
-        public void startUpdateBatchInputTimer(@NonNull PointerTracker tracker) {}
-        @Override
-        public void cancelUpdateBatchInputTimer(@NonNull PointerTracker tracker) {}
-        @Override
-        public void cancelAllUpdateBatchInputTimers() {}
     }
 }

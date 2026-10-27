@@ -49,7 +49,7 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
             ComposedData.createForWord(word),
             NgramContext.getEmptyPrevWordsContext(0),
             KeyboardSwitcher.getInstance().keyboard!!, // looks like actual keyboard doesn't matter (composed data doesn't contain coordinates)
-            SettingsValuesForSuggestion(false, false),
+            SettingsValuesForSuggestion(false),
             Suggest.SESSION_ID_TYPING, SuggestedWords.INPUT_STYLE_TYPING
         )
         return suggestionResults
@@ -100,12 +100,12 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
 
     override fun getCurrentLocale(): Locale = mainLocale
 
-    override fun usesSameSettings(locales: List<Locale>, contacts: Boolean, apps: Boolean, personalization: Boolean): Boolean {
+    override fun usesSameSettings(locales: List<Locale>): Boolean {
         return locales.singleOrNull() == mainLocale
     }
 
-    override fun resetDictionaries(context: Context, newLocale: Locale, useContactsDict: Boolean, useAppsDict: Boolean,
-                                   usePersonalizedDicts: Boolean, forceReloadMainDictionary: Boolean, dictNamePrefix: String, listener: DictionaryInitializationListener?
+    override fun resetDictionaries(context: Context, newLocale: Locale,
+                                   forceReloadMainDictionary: Boolean, dictNamePrefix: String, listener: DictionaryInitializationListener?
     ) { }
 
     override fun hasAtLeastOneInitializedMainDictionary(): Boolean = dict.isInitialized
@@ -115,23 +115,11 @@ class SingleDictionaryFacilitator(private val dict: Dictionary) : DictionaryFaci
     override fun waitForLoadingMainDictionaries(timeout: Long, unit: TimeUnit) {
     }
 
-    override fun addToUserHistory(
-        suggestion: String, wasAutoCapitalized: Boolean, ngramContext: NgramContext,
-        timeStampInSeconds: Long, blockPotentiallyOffensive: Boolean
-    ) {}
-
     override fun adjustConfidences(word: String, wasAutoCapitalized: Boolean) {}
-
-    override fun unlearnFromUserHistory(word: String, ngramContext: NgramContext,
-        timeStampInSeconds: Long, event: DictionaryFacilitator.UnlearnEvent) {}
 
     override fun isValidSpellingWord(word: String): Boolean = dict.isValidWord(word)
 
     override fun isValidSuggestionWord(word: String) = isValidSpellingWord(word)
-
-    override fun removeWord(word: String) {}
-
-    override fun clearUserHistoryDictionary(context: Context) {}
 
     override fun localesAndConfidences(): String? = null
 

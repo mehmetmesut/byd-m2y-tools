@@ -33,8 +33,6 @@ import helium314.keyboard.accessibility.MainKeyboardAccessibilityDelegate;
 import helium314.keyboard.compat.ConfigurationCompatKt;
 import helium314.keyboard.keyboard.internal.DrawingPreviewPlacerView;
 import helium314.keyboard.keyboard.internal.DrawingProxy;
-import helium314.keyboard.keyboard.internal.GestureFloatingTextDrawingPreview;
-import helium314.keyboard.keyboard.internal.GestureTrailsDrawingPreview;
 import helium314.keyboard.keyboard.internal.KeyDrawParams;
 import helium314.keyboard.keyboard.internal.KeyPreviewChoreographer;
 import helium314.keyboard.keyboard.internal.KeyPreviewDrawParams;
@@ -46,14 +44,11 @@ import helium314.keyboard.keyboard.internal.TimerHandler;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodSubtype;
-import helium314.keyboard.latin.SuggestedWords;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Colors;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.CoordinateUtils;
 import helium314.keyboard.latin.define.DebugFlags;
-import helium314.keyboard.latin.settings.DebugSettings;
-import helium314.keyboard.latin.settings.Defaults;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LanguageOnSpacebarUtils;
@@ -97,8 +92,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     // Drawing preview placer view
     private final DrawingPreviewPlacerView mDrawingPreviewPlacerView;
     private final int[] mOriginCoords = CoordinateUtils.newInstance();
-    private final GestureFloatingTextDrawingPreview mGestureFloatingTextDrawingPreview;
-    private final GestureTrailsDrawingPreview mGestureTrailsDrawingPreview;
     private final SlidingKeyInputDrawingPreview mSlidingKeyInputDrawingPreview;
 
     // Key preview
@@ -114,9 +107,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     // More keys panel (used by both popup keys keyboard and more suggestions view)
     // TODO: Consider extending to support multiple popup keys panels
     private PopupKeysPanel mPopupKeysPanel;
-
-    // Gesture floating preview text
-    private final int mGestureFloatingPreviewTextLingerTimeout;
 
     private final KeyDetector mKeyDetector;
     private final NonDistinctMultitouchHelper mNonDistinctMultitouchHelper;
@@ -140,9 +130,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 attrs, R.styleable.MainKeyboardView, defStyle, R.style.MainKeyboardView);
         final int ignoreAltCodeKeyTimeout = mainKeyboardViewAttr.getInt(
                 R.styleable.MainKeyboardView_ignoreAltCodeKeyTimeout, 0);
-        final int gestureRecognitionUpdateTime = mainKeyboardViewAttr.getInt(
-                R.styleable.MainKeyboardView_gestureRecognitionUpdateTime, 0);
-        mTimerHandler = new TimerHandler(this, ignoreAltCodeKeyTimeout, gestureRecognitionUpdateTime);
+        mTimerHandler = new TimerHandler(this, ignoreAltCodeKeyTimeout);
 
         final float keyHysteresisDistance = mainKeyboardViewAttr.getDimension(
                 R.styleable.MainKeyboardView_keyHysteresisDistance, 0.0f);
@@ -153,11 +141,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         PointerTracker.init(mainKeyboardViewAttr, mTimerHandler, this /* DrawingProxy */);
 
         final SharedPreferences prefs = KtxKt.prefs(context);
-        final boolean forceNonDistinctMultitouch = prefs.getBoolean(
-                DebugSettings.PREF_FORCE_NON_DISTINCT_MULTITOUCH, Defaults.PREF_FORCE_NON_DISTINCT_MULTITOUCH);
         final boolean hasDistinctMultitouch = context.getPackageManager()
-                .hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH_DISTINCT)
-                && !forceNonDistinctMultitouch;
+                .hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH_DISTINCT);
         mNonDistinctMultitouchHelper = hasDistinctMultitouch ? null : new NonDistinctMultitouchHelper();
 
         final int backgroundDimAlpha = mainKeyboardViewAttr.getInt(
@@ -192,15 +177,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 popupKeysKeyboardLayoutId);
         mConfigShowPopupKeysKeyboardAtTouchedPoint = mainKeyboardViewAttr.getBoolean(
                 R.styleable.MainKeyboardView_showPopupKeysKeyboardAtTouchedPoint, false);
-
-        final int gestureTrailFadeoutDuration = Settings.getValues().mGestureTrailFadeoutDuration;
-        mGestureFloatingPreviewTextLingerTimeout = gestureTrailFadeoutDuration / 4;
-
-        mGestureFloatingTextDrawingPreview = new GestureFloatingTextDrawingPreview(mainKeyboardViewAttr);
-        mGestureFloatingTextDrawingPreview.setDrawingView(drawingPreviewPlacerView);
-
-        mGestureTrailsDrawingPreview = new GestureTrailsDrawingPreview(mainKeyboardViewAttr);
-        mGestureTrailsDrawingPreview.setDrawingView(drawingPreviewPlacerView);
 
         mSlidingKeyInputDrawingPreview = new SlidingKeyInputDrawingPreview(mainKeyboardViewAttr);
         mSlidingKeyInputDrawingPreview.setDrawingView(drawingPreviewPlacerView);
@@ -347,7 +323,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         }
         ViewGroup windowContentView = rootView.findViewById(android.R.id.content);
         if (mDrawingPreviewPlacerView.getParent() instanceof ViewGroup vg)
-            vg.removeView(mDrawingPreviewPlacerView); // when moving keyboard from input method content view to floating container
+            vg.removeView(mDrawingPreviewPlacerView); // when the keyboard view is attached again
         // Note: It'd be very weird if we get null by android.R.id.content.
         if (windowContentView == null) {
             Log.w(TAG, "Cannot find android.R.id.content view to add DrawingPreviewPlacerView");
@@ -416,52 +392,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         } else {
             mSlidingKeyInputDrawingPreview.dismissSlidingKeyInputPreview();
         }
-    }
-
-    private void setGesturePreviewMode(final boolean isGestureTrailEnabled,
-            final boolean isGestureFloatingPreviewTextEnabled) {
-        mGestureFloatingTextDrawingPreview.setPreviewEnabled(isGestureFloatingPreviewTextEnabled);
-        mGestureTrailsDrawingPreview.setPreviewEnabled(isGestureTrailEnabled);
-    }
-
-    public void showGestureFloatingPreviewText(@NonNull final SuggestedWords suggestedWords,
-            final boolean dismissDelayed) {
-        locatePreviewPlacerView();
-        mGestureFloatingTextDrawingPreview.setSuggestedWords(suggestedWords);
-        if (dismissDelayed) {
-            mTimerHandler.postDismissGestureFloatingPreviewText(
-                    mGestureFloatingPreviewTextLingerTimeout);
-        }
-    }
-
-    // Implements {@link DrawingProxy#dismissGestureFloatingPreviewTextWithoutDelay()}.
-    @Override
-    public void dismissGestureFloatingPreviewTextWithoutDelay() {
-        mGestureFloatingTextDrawingPreview.dismissGestureFloatingPreviewText();
-    }
-
-    @Override
-    public void showGestureTrail(@NonNull final PointerTracker tracker,
-            final boolean showsFloatingPreviewText) {
-        locatePreviewPlacerView();
-        if (showsFloatingPreviewText) {
-            mGestureFloatingTextDrawingPreview.setPreviewPosition(tracker);
-        }
-        mGestureTrailsDrawingPreview.setPreviewPosition(tracker);
-    }
-
-    // Note that this method is called from a non-UI thread.
-    @SuppressWarnings("static-method")
-    public void setMainDictionaryAvailability(final boolean mainDictionaryAvailable) {
-        PointerTracker.setMainDictionaryAvailability(mainDictionaryAvailable);
-    }
-
-    public void setGestureHandlingEnabledByUser(final boolean isGestureHandlingEnabledByUser,
-            final boolean isGestureTrailEnabled,
-            final boolean isGestureFloatingPreviewTextEnabled) {
-        PointerTracker.setGestureHandlingEnabledByUser(isGestureHandlingEnabledByUser);
-        setGesturePreviewMode(isGestureHandlingEnabledByUser && isGestureTrailEnabled,
-                isGestureHandlingEnabledByUser && isGestureFloatingPreviewTextEnabled);
     }
 
     @Override
@@ -613,7 +543,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     public void cancelAllOngoingEvents() {
         mTimerHandler.cancelAllMessages();
         PointerTracker.setReleasedKeyGraphicsToAllKeys();
-        mGestureFloatingTextDrawingPreview.dismissGestureFloatingPreviewText();
         mSlidingKeyInputDrawingPreview.dismissSlidingKeyInputPreview();
         PointerTracker.dismissAllPopupKeysPanels();
         PointerTracker.cancelAllPointerTrackers();

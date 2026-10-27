@@ -31,16 +31,11 @@ public final class ResourceUtils {
         // This utility class is not publicly instantiable.
     }
 
+    // M2Y Board: the keyboard uses the middle part of the screen; KeyboardSwitcher pads the frame on both sides
+    public static final float KEYBOARD_WIDTH_FRACTION = 0.55f;
+
     public static int getKeyboardWidth(final Context ctx, final SettingsValues settingsValues) {
-        // Floating keyboard width takes priority
-        if (settingsValues.mIsFloatingKeyboard) {
-            return settingsValues.mFloatingWidth;
-        }
-        int defaultKeyboardWidth = getDefaultKeyboardWidth(ctx);
-        if (settingsValues.mOneHandedModeEnabled) {
-            return (int) (settingsValues.mOneHandedModeScale * defaultKeyboardWidth);
-        }
-        return defaultKeyboardWidth;
+        return Math.round(getDefaultKeyboardWidth(ctx) * KEYBOARD_WIDTH_FRACTION);
     }
 
     public static int getDefaultKeyboardWidth(final Context ctx) {
@@ -69,9 +64,6 @@ public final class ResourceUtils {
     }
 
     public static int getKeyboardHeight(Resources res, SettingsValues settingsValues) {
-        if (settingsValues.mIsFloatingKeyboard) {
-            return settingsValues.mFloatingHeight;
-        }
         int defaultKeyboardHeight = getDefaultKeyboardHeight(res, settingsValues.mShowsNumberRow);
         return (int)(defaultKeyboardHeight * settingsValues.mKeyboardHeightScale);
     }

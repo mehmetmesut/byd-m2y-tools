@@ -14,16 +14,6 @@ fun isDarkColor(@ColorInt color: Int) =
     if (android.R.color.transparent == color) true
     else getBrightnessSquared(color) < 50 * 50
 
-fun isGoodContrast(@ColorInt color1: Int, @ColorInt color2: Int) =
-    colorDistanceSquared(color1, color2) > 80 * 80
-
-private fun colorDistanceSquared(@ColorInt color1: Int, @ColorInt color2: Int): Int {
-    val diffR = Color.red(color1) - Color.red(color2)
-    val diffG = Color.green(color1) - Color.green(color2)
-    val diffB = Color.blue(color1) - Color.blue(color2)
-    return diffR * diffR + diffB * diffB + diffG * diffG
-}
-
 @ColorInt
 fun brightenOrDarken(@ColorInt color: Int, preferDarken: Boolean) =
     if (preferDarken) {

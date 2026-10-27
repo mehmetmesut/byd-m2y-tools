@@ -31,6 +31,16 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class KeyboardParams {
+    // M2Y Board: the outer keys sit half a key gap from the left and right edges (as upstream); the same gap is
+    // left under the bottom row, so the keys do not merge with the BYD climate bar below the keyboard
+    // shortcut: measured on the 1920x1080 / 240 dpi head unit, the emoji and clipboard bottom row ends 2 px higher than the
+    // main keyboard; re-measure if the screen or the bottom row height changes
+    public static final int SECONDARY_BOTTOM_ROW_CORRECTION_PX = 2;
+
+    public static int edgeGapPx(final float relativeHorizontalGap, final int keyboardWidth) {
+        return Math.round(relativeHorizontalGap * keyboardWidth / 2);
+    }
+
     private static final int DEFAULT_KEYBOARD_COLUMNS = 10;
     public static final int DEFAULT_KEYBOARD_ROWS = 4;
 
@@ -222,9 +232,12 @@ public class KeyboardParams {
             mOccupiedWidth = width;
             mTopPadding = (int) keyboardAttr.getFraction(
                     R.styleable.Keyboard_keyboardTopPadding, height, height, 0);
+            mRelativeHorizontalGap = keyboardAttr.getFraction(
+                    R.styleable.Keyboard_horizontalGap, 1, 1, 0) * sv.mKeyGapScale;
+            mHorizontalGap = (int) (mRelativeHorizontalGap * width);
             mBottomPadding = (int) (keyboardAttr.getFraction(
                     R.styleable.Keyboard_keyboardBottomPadding, height, height, 0)
-                    * sv.mBottomPaddingScale);
+                    * sv.mBottomPaddingScale) + edgeGapPx(mRelativeHorizontalGap, width);
             mLeftPadding = (int) (keyboardAttr.getFraction(
                     R.styleable.Keyboard_keyboardLeftPadding, width, width, 0)
                     * sv.mSidePaddingScale);
@@ -240,11 +253,8 @@ public class KeyboardParams {
             mDefaultAbsoluteKeyWidth = (int) (mDefaultKeyWidth * mBaseWidth);
             mAbsolutePopupKeyWidth = (int) (alphaSymbolKeyWidth * mBaseWidth);
 
-            mRelativeHorizontalGap = keyboardAttr.getFraction(
-                    R.styleable.Keyboard_horizontalGap, 1, 1, 0) * sv.mKeyGapScale;
             mRelativeVerticalGap = keyboardAttr.getFraction(
                     R.styleable.Keyboard_verticalGap, 1, 1, 0) * sv.mKeyGapScale;
-            mHorizontalGap = (int) (mRelativeHorizontalGap * width);
             mVerticalGap = (int) (mRelativeVerticalGap * height);
 
             mBaseHeight = mOccupiedHeight - mTopPadding - mBottomPadding + mVerticalGap;

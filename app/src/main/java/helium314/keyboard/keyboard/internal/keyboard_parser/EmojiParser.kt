@@ -12,10 +12,8 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.common.splitOnWhitespace
-import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ResourceUtils
-import helium314.keyboard.latin.utils.prefs
 import java.util.Collections
 import kotlin.let
 import kotlin.math.sqrt
@@ -102,7 +100,7 @@ fun loadEmojiDefaultVersionsAndPopupSpecs(context: Context) {
 }
 
 private fun loadEmojiDefaultVersionsAndPopupSpecs(context: Context, category2EmojiLines: List<String>?) {
-    val defaultTone = context.prefs().getString(Settings.PREF_EMOJI_SKIN_TONE, Defaults.PREF_EMOJI_SKIN_TONE)
+    val defaultTone = "" // M2Y Board: neutral skin tone is fixed
     if (defaultSkinTone == defaultTone) {
         return
     }

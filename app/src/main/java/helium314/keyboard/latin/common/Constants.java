@@ -28,13 +28,6 @@ public final class Constants {
          */
         public static final String NO_MICROPHONE = "noMicrophoneKey";
 
-        /**
-         * The private IME option used to suppress the floating gesture preview for a given text
-         * field. This overrides the corresponding keyboard settings preference.
-         * {@link helium314.keyboard.latin.settings.SettingsValues#mGestureFloatingPreviewTextEnabled}
-         */
-        public static final String NO_FLOATING_GESTURE_PREVIEW = "noGestureFloatingPreview";
-
         private ImeOption() {
             // This utility class is not publicly instantiable.
         }
@@ -178,7 +171,6 @@ public final class Constants {
     public static final int CODE_SLASH = '/';
     public static final int CODE_BACKSLASH = '\\';
     public static final int CODE_VERTICAL_BAR = '|';
-    public static final int CODE_COMMERCIAL_AT = '@';
     public static final int CODE_PLUS = '+';
     public static final int CODE_PERCENT = '%';
     public static final int CODE_CLOSING_PARENTHESIS = ')';
@@ -193,7 +185,6 @@ public final class Constants {
     public static final int RECENTS_TEMPLATE_KEY_CODE_0 = 0x30;
     public static final int RECENTS_TEMPLATE_KEY_CODE_1 = 0x31;
 
-    public static final String REGEXP_PERIOD = "\\.";
     public static final String STRING_SPACE = " ";
 
     public static boolean isLetterCode(final int code) {
@@ -245,13 +236,6 @@ public final class Constants {
     public static final int SCREEN_METRICS_LARGE_PHONE = 1;
     public static final int SCREEN_METRICS_LARGE_TABLET = 2;
     public static final int SCREEN_METRICS_SMALL_TABLET = 3;
-
-    /**
-     * Default capacity of gesture points container.
-     * This constant is used by {@link helium314.keyboard.keyboard.internal.BatchInputArbiter}
-     * and etc. to preallocate regions that contain gesture event points.
-     */
-    public static final int DEFAULT_GESTURE_POINTS_CAPACITY = 128;
 
     public static final int MAX_IME_DECODER_RESULTS = 20;
     public static final int DECODER_SCORE_SCALAR = 1000000;

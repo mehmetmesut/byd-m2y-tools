@@ -26,8 +26,12 @@ internal class EmojiLayoutParams(res: Resources) {
 
         val keyVerticalGap = (res.getFraction(R.fraction.config_key_vertical_gap_holo,
             defaultKeyboardHeight, defaultKeyboardHeight) * sv.mKeyGapScale).toInt()
+        // keyboard width as ResourceUtils.getDefaultKeyboardWidth gives it below Android 15 (the head unit runs Android 10)
+        val edgeGap = KeyboardParams.edgeGapPx(res.getFraction(R.fraction.config_key_horizontal_gap_holo, 1, 1) * sv.mKeyGapScale,
+            Math.round(res.displayMetrics.widthPixels * ResourceUtils.KEYBOARD_WIDTH_FRACTION))
         val bottomPadding = (res.getFraction(R.fraction.config_keyboard_bottom_padding_holo,
-            defaultKeyboardHeight, defaultKeyboardHeight) * sv.mBottomPaddingScale).toInt()
+            defaultKeyboardHeight, defaultKeyboardHeight) * sv.mBottomPaddingScale).toInt() +
+            edgeGap // M2Y Board: same gap as the main keyboard
         val topPadding = res.getFraction(R.fraction.config_keyboard_top_padding_holo,
             defaultKeyboardHeight, defaultKeyboardHeight).toInt()
 
@@ -37,7 +41,7 @@ internal class EmojiLayoutParams(res: Resources) {
         val pageIdHeight = res.getDimension(R.dimen.config_emoji_category_page_id_height)
         emojiCategoryPageIdViewHeight = pageIdHeight.toInt()
         val offset = 1.25f * res.displayMetrics.density * sv.mKeyboardHeightScale // like ClipboardLayoutParams
-        val emojiListHeight = defaultKeyboardHeight - bottomRowKeyboardHeight - bottomPadding + (offset.toInt())
+        val emojiListHeight = defaultKeyboardHeight - bottomRowKeyboardHeight - bottomPadding + (offset.toInt()) + KeyboardParams.SECONDARY_BOTTOM_ROW_CORRECTION_PX
         emojiListBottomMargin = 0
         emojiKeyboardHeight = emojiListHeight - emojiCategoryPageIdViewHeight - emojiListBottomMargin
     }

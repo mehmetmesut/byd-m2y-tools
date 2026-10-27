@@ -5,7 +5,6 @@
  */
 package helium314.keyboard.latin
 
-import android.text.TextUtils
 import com.android.inputmethod.latin.utils.BinaryDictionaryUtils
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.internal.keyboard_parser.getEmojiDefaultVersion
@@ -14,19 +13,15 @@ import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.InputPointers
 import helium314.keyboard.latin.common.StringUtils
-import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION
-import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.suggestions.SuggestionStripView
 import helium314.keyboard.latin.utils.AutoCorrectionUtils
-import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SuggestionResults
 import java.util.Locale
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * This class loads a dictionary and provides a list of suggestions for a given sequence of
@@ -57,15 +52,10 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     fun getSuggestedWords(wordComposer: WordComposer, ngramContext: NgramContext, keyboard: Keyboard,
                           settingsValuesForSuggestion: SettingsValuesForSuggestion, isCorrectionEnabled: Boolean,
                           inputStyle: Int, sequenceNumber: Int): SuggestedWords =
-        if (wordComposer.isBatchMode) {
-            getSuggestedWordsForBatchInput(wordComposer, ngramContext, keyboard, settingsValuesForSuggestion,
-                inputStyle, isCorrectionEnabled, sequenceNumber)
-        } else {
-            getSuggestedWordsForNonBatchInput(wordComposer, ngramContext, keyboard, settingsValuesForSuggestion,
-                inputStyle, isCorrectionEnabled, sequenceNumber)
-        }
+        getSuggestedWordsForNonBatchInput(wordComposer, ngramContext, keyboard, settingsValuesForSuggestion,
+            inputStyle, isCorrectionEnabled, sequenceNumber)
 
-    // Retrieves suggestions for non-batch input (typing, recorrection, predictions...)
+    // Retrieves suggestions for typing, recorrection, predictions...
     // and calls the callback function with the suggestions.
     private fun getSuggestedWordsForNonBatchInput(wordComposer: WordComposer, ngramContext: NgramContext, keyboard: Keyboard,
                       settingsValuesForSuggestion: SettingsValuesForSuggestion, inputStyleIfNotPrediction: Int,
@@ -112,6 +102,11 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         if (typedWordString.isNotEmpty()) {
             suggestionsContainer.add(0, typedWordInfo)
         }
+        // M2Y Board: "name@g" -> "name@gmail.com" etc., right after the typed word so they lead the strip
+        suggestionsContainer.addAll(if (typedWordString.isEmpty()) 0 else 1, emailDomainCompletions(typedWordString).map {
+            SuggestedWordInfo(it, "", SuggestedWordInfo.MAX_SCORE - 1, SuggestedWordInfo.KIND_COMPLETION,
+                Dictionary.DICTIONARY_HARDCODED, SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE)
+        })
         val suggestionsList = if (SuggestionStripView.DEBUG_SUGGESTIONS && suggestionsContainer.isNotEmpty())
                 getSuggestionsInfoListWithDebugInfo(capitalizedTypedWord, suggestionsContainer)
             else suggestionsContainer
@@ -262,80 +257,6 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         return allowsToBeAutoCorrected to hasAutoCorrection
     }
 
-    // Retrieves suggestions for the batch input
-    // and calls the callback function with the suggestions.
-    private fun getSuggestedWordsForBatchInput(
-        wordComposer: WordComposer,
-        ngramContext: NgramContext, keyboard: Keyboard,
-        settingsValuesForSuggestion: SettingsValuesForSuggestion,
-        inputStyle: Int, isCorrectionEnabled: Boolean, sequenceNumber: Int
-    ): SuggestedWords {
-        val suggestionResults = mDictionaryFacilitator.getSuggestionResults(
-            wordComposer.composedDataSnapshot, ngramContext, keyboard,
-            settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-        )
-
-        // For transforming words that don't come from a dictionary, because it's our best bet
-        val locale = mDictionaryFacilitator.mainLocale
-        val capsMode = getCapsModeForGesture(wordComposer, keyboard)
-        val suggestionsContainer = ArrayList(suggestionResults)
-        replaceSingleLetterFirstSuggestion(suggestionsContainer)
-
-        val rejected: SuggestedWordInfo?
-        if (SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION && suggestionsContainer.size > 1 && TextUtils.equals(
-                suggestionsContainer[0].mWord,
-                wordComposer.rejectedBatchModeSuggestion
-            )
-        ) {
-            rejected = suggestionsContainer.removeAt(0)
-            suggestionsContainer.add(1, rejected)
-        } else {
-            rejected = null
-        }
-        SuggestedWordInfo.removeDupsAndTypedWord(null, suggestionsContainer)
-        makeFirstTwoSuggestionsNonEmoji(suggestionsContainer)
-        val pseudoTypedWord = suggestionsContainer.firstOrNull() // unchanged first suggestion, but considering adjusted order
-        capitalizeAndAddTrailingSingleQuotes(suggestionsContainer, capsMode, 0, locale)
-
-        // For some reason some suggestions with MIN_VALUE are making their way here.
-        // TODO: Find a more robust way to detect distracters.
-        for (i in suggestionsContainer.indices.reversed()) {
-            if (suggestionsContainer[i].mScore < SUPPRESS_SUGGEST_THRESHOLD) {
-                suggestionsContainer.removeAt(i)
-            }
-        }
-
-        val capitalizedTypedWord = capitalize(wordComposer.typedWord, capsMode, locale)
-        val addCapitalizedSuggestion = capitalizedTypedWord != wordComposer.typedWord && suggestionsContainer.drop(1).none { it.mWord == capitalizedTypedWord }
-        if (addCapitalizedSuggestion) {
-            suggestionsContainer.add(min(1, suggestionsContainer.size),
-                SuggestedWordInfo(capitalizedTypedWord, "", 0, SuggestedWordInfo.KIND_TYPED,
-                    Dictionary.DICTIONARY_USER_TYPED, SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE)
-            )
-        }
-
-        useDefaultEmojiSkinTone(suggestionsContainer)
-
-        // In the batch input mode, the most relevant suggested word should act as a "typed word"
-        // (typedWordValid=true), not as an "auto correct word" (willAutoCorrect=false).
-        // Exception is when using shift to change capitalization of suggestions.
-        // Note that because this method is never used to get predictions, there is no need to
-        // modify inputType such in getSuggestedWordsForNonBatchInput.
-        val pseudoTypedWordInfo = preferNextWordSuggestion(
-            pseudoTypedWord, suggestionsContainer,
-            getNextWordSuggestions(ngramContext, keyboard, inputStyle, settingsValuesForSuggestion), rejected
-        )
-        val suggestionsList = if (SuggestionStripView.DEBUG_SUGGESTIONS && suggestionsContainer.isNotEmpty()) {
-            getSuggestionsInfoListWithDebugInfo(suggestionResults.first().mWord, suggestionsContainer)
-        } else {
-            suggestionsContainer
-        }
-
-        val autocorrectCapitalization = addCapitalizedSuggestion && Settings.getValues().mAutoCorrectCapitalizedSuggestion && isCorrectionEnabled && !wordComposer.isCursorFrontOrMiddleOfComposingWord
-        return SuggestedWords(suggestionsList, suggestionResults.mRawSuggestions, pseudoTypedWordInfo, true,
-            autocorrectCapitalization, false, inputStyle, sequenceNumber)
-    }
-
     private fun useDefaultEmojiSkinTone(suggestionsList: ArrayList<SuggestedWordInfo>) {
         for (i in suggestionsList.indices) {
             suggestionsList[i] = useDefaultEmojiSkinTone(suggestionsList[i])
@@ -354,15 +275,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     }
 
     companion object {
-        private val TAG: String = Suggest::class.java.simpleName
 
         // Session id for {@link #getSuggestedWords(WordComposer,String,ProximityInfo,boolean,int)}.
-        // We are sharing the same ID between typing and gesture to save RAM footprint.
         const val SESSION_ID_TYPING = 0
-        const val SESSION_ID_GESTURE = 0
-
-        // Close to -2**31
-        private const val SUPPRESS_SUGGEST_THRESHOLD = -2000000000
 
         private const val MAXIMUM_AUTO_CORRECT_LENGTH_FOR_GERMAN = 12
         // TODO: should we add Finnish here?
@@ -479,17 +394,6 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             return CapsMode.OFF
         }
 
-        /** returns CapsMode.MANUAL, CapsMode.MANUAL_LOCKED, or CAPS_MODE_OFF */
-        // maybe could check the details in differences to getCapsModeForTyping and unify?
-        private fun getCapsModeForGesture(wordComposer: WordComposer, keyboard: Keyboard): CapsMode {
-            val capsMode = keyboard.mId.element.capsMode
-            if (capsMode == CapsMode.MANUAL || capsMode == CapsMode.MANUAL_LOCKED)
-                return capsMode
-            if (wordComposer.isAllUpperCase) return CapsMode.MANUAL_LOCKED
-            if (wordComposer.wasShiftedNoLock()) return CapsMode.MANUAL
-            return CapsMode.OFF
-        }
-
         private fun capitalize(word: String, capsMode: CapsMode, locale: Locale) = when (capsMode) {
             CapsMode.MANUAL_LOCKED -> word.uppercase(locale)
             CapsMode.MANUAL -> StringUtils.capitalizeFirstCodePoint(word, locale)
@@ -508,55 +412,17 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 }
             }
         }
-
-        /** reduces score of the first suggestion if next one is close and has more than a single letter */
-        private fun replaceSingleLetterFirstSuggestion(suggestionResults: MutableList<SuggestedWordInfo>) {
-            if (suggestionResults.size < 2 || suggestionResults.first().mWord.length != 1) return
-            // suppress single letter suggestions if next suggestion is close and has more than one letter
-            val first = suggestionResults[0]
-            val second = suggestionResults[1]
-            if (second.mWord.length > 1 && second.mScore > 0.94 * first.mScore) {
-                suggestionResults.remove(first) // remove and re-add with lower score
-                val modifiedFirst = SuggestedWordInfo(
-                    first.mWord, first.mPrevWordsContext, (first.mScore * 0.93).toInt(),
-                    first.mKindAndFlags, first.mSourceDict, first.mIndexOfTouchPointOfSecondWord, first.mAutoCommitFirstWordConfidence
-                )
-                val insertIndex = suggestionResults.indexOfFirst { it.mScore < modifiedFirst.mScore }
-                if (insertIndex == -1) suggestionResults.add(modifiedFirst)
-                else suggestionResults.add(insertIndex, modifiedFirst)
-
-                if (DebugFlags.DEBUG_ENABLED)
-                    Log.d(TAG, "reduced score of ${first.mWord} from ${first.mScore}, new first: ${suggestionResults.first().mWord} (${suggestionResults.first().mScore})")
-            }
-        }
-
-        /** returns new pseudoTypedWordInfo, puts it in suggestionsContainer, modifies nextWordSuggestions */
-        private fun preferNextWordSuggestion(
-            pseudoTypedWordInfo: SuggestedWordInfo?,
-            suggestionsContainer: ArrayList<SuggestedWordInfo>,
-            nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?
-        ): SuggestedWordInfo? {
-            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts
-                || pseudoTypedWordInfo.mSourceDict.mDictType != Dictionary.TYPE_MAIN || suggestionsContainer.size < 2
-            ) return pseudoTypedWordInfo
-            val goodNextSuggestions = nextWordSuggestions.filter { it.mScore >= 170 } // we only want reasonably often typed words, value may require tuning
-            if (goodNextSuggestions.isEmpty()) return pseudoTypedWordInfo
-
-            // for each suggestion, check whether the word was already typed in this ngram context (i.e. is nextWordSuggestion)
-            for (suggestion in suggestionsContainer) {
-                if (suggestion.mScore < pseudoTypedWordInfo.mScore * 0.93) break // we only want reasonably good suggestions, value may require tuning
-                if (suggestion === rejected) continue  // ignore rejected suggestions
-                for (nextWordSuggestion in goodNextSuggestions) {
-                    if (nextWordSuggestion.mWord != suggestion.mWord) continue
-                    // if we have a high scoring suggestion in next word suggestions, take it (because it's expected that user might want to type it again)
-                    suggestionsContainer.remove(suggestion)
-                    suggestionsContainer.add(0, suggestion)
-                    if (DebugFlags.DEBUG_ENABLED)
-                        Log.d(TAG, "replaced batch word $pseudoTypedWordInfo with $suggestion")
-                    return suggestion
-                }
-            }
-            return pseudoTypedWordInfo
-        }
     }
+}
+
+/** M2Y Board: the mail domains most used in Turkey, in the order they are offered after "@". */
+private val EMAIL_DOMAINS = listOf("gmail.com", "hotmail.com", "outlook.com", "icloud.com", "yahoo.com", "yandex.com")
+
+/** For a typed "name@" or "name@ho", the full addresses with matching domains; empty for anything else. */
+internal fun emailDomainCompletions(typedWord: String): List<String> {
+    val at = typedWord.indexOf('@')
+    if (at <= 0 || typedWord.lastIndexOf('@') != at) return emptyList()
+    val local = typedWord.substring(0, at)
+    val domainPrefix = typedWord.substring(at + 1).lowercase()
+    return EMAIL_DOMAINS.filter { it.startsWith(domainPrefix) && it != domainPrefix }.map { "$local@$it" }
 }

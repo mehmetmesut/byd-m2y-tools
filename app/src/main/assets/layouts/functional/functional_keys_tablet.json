@@ -1,41 +1,34 @@
 [
   [
     { "$": "keyboard_state_selector", "dpad": { "type": "placeholder", "width": 0.1 } },
-    { "type": "placeholder" },
-    { "label": "delete", "width": 0.1 }
+    { "type": "placeholder" }
   ],
   [
     { "type": "placeholder" }
   ],
   [
     { "$": "keyboard_state_selector", "dpad": { "type": "placeholder", "width": 0.1 } },
-    { "type": "placeholder" },
-    { "label": "action", "width": 0.1, "labelFlags": 1073741824 }
+    { "type": "placeholder" }
   ],
   [
-    { "label": "shift", "width": 0.1 },
+    { "label": "shift", "width": 0.13 },
     { "type": "placeholder" },
-    { "label": "shift" }
+    { "label": "delete", "width": 0.13 }
   ],
   [
-    { "label": "symbol_alpha" },
-    { "$": "variation_selector",
-      "default":  { "label": "comma", "labelFlags": 1073741824 },
-      "email":    { "label": "@", "labelFlags": 1073741824, "groupId": 1, "type": "function" },
-      "uri":      { "label": "/", "labelFlags": 1073741824, "groupId": 1, "type": "function" }
-    },
-    { "$": "keyboard_state_selector", "languageKeyEnabled": { "$": "keyboard_state_selector", "alphabet": { "label": "language_switch" }}},
-    { "$": "keyboard_state_selector", "symbols": { "label": "numpad" } },
+    { "label": "symbol_alpha", "width": 0.1 },
+    { "$": "keyboard_state_selector", "symbols": { "code": -202, "label": "?123", "type": "function" }, "moreSymbols": { "code": -202, "label": "?123", "type": "function" } },
+    { "$": "keyboard_state_selector", "symbols": { "code": -205, "label": "#+=", "type": "function" },
+      "moreSymbols": { "code": -205, "label": "#+=", "type": "function" } },
+    { "$": "keyboard_state_selector", "symbols": { "label": "emoji" }, "moreSymbols": { "label": "emoji" } },
+    { "label": "@", "labelFlags": 1073741824 },
     { "label": "space" },
     { "$": "keyboard_state_selector",
       "symbols": { "$": "keyboard_state_selector", "dpadKeyEnabled": { "label": "dpad" } },
       "dpad": { "label": "symbol" }
     },
     { "label": "period" },
-    { "$": "variation_selector",
-      "default":  { "label": "emoji" },
-      "email":    { "label": "com" },
-      "uri":      { "label": "com" }
-    }
+    { "label": "action", "width": 0.15, "labelFlags": 1073741824 },
+    { "code": -232, "label": "!icon/hide_key", "type": "function" }
   ]
 ]

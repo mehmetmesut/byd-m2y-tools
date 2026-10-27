@@ -6,15 +6,10 @@
 
 package helium314.keyboard.keyboard.emoji;
 
-import static helium314.keyboard.keyboard.internal.keyboard_parser.EmojiParserKt.EMOJI_HINT_LABEL;
-
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 
-import helium314.keyboard.keyboard.internal.KeyboardIconsSet;
-import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.common.Constants;
-import helium314.keyboard.latin.common.StringUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -26,10 +21,8 @@ import helium314.keyboard.latin.settings.Settings;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * This is a Keyboard class where you can add keys dynamically shown in a grid layout
@@ -44,32 +37,29 @@ final class DynamicGridKeyboard extends Keyboard {
     private final int mColumnsNum;
     private final int mMaxKeyCount;
     private final boolean mFixedRowCount;
-    private final boolean mIsRecents;
     private final ArrayDeque<GridKey> mGridKeys = new ArrayDeque<>();
-    private final ArrayDeque<Key> mPendingKeys = new ArrayDeque<>();
 
     private List<Key> mCachedGridKeys;
     private final ArrayList<Integer> mEmptyColumnIndices = new ArrayList<>(4);
 
     public static DynamicGridKeyboard ofKeyCount(SharedPreferences prefs, Keyboard templateKeyboard,
-            int maxKeyCount, boolean isRecents, int width) {
-        return new DynamicGridKeyboard(prefs, templateKeyboard, maxKeyCount, isRecents, width, false);
+            int maxKeyCount, int width) {
+        return new DynamicGridKeyboard(prefs, templateKeyboard, maxKeyCount, width, false);
     }
 
     public static DynamicGridKeyboard ofRowCount(SharedPreferences prefs, Keyboard templateKeyboard,
-            int maxRowCount, boolean isRecents, int width) {
-        return new DynamicGridKeyboard(prefs, templateKeyboard, maxRowCount, isRecents, width, true);
+            int maxRowCount, int width) {
+        return new DynamicGridKeyboard(prefs, templateKeyboard, maxRowCount, width, true);
     }
 
     private DynamicGridKeyboard(SharedPreferences prefs, Keyboard templateKeyboard,
-            int maxCount, boolean isRecents, int width, boolean fixedRowCount) {
+            int maxCount, int width, boolean fixedRowCount) {
         super(templateKeyboard);
         // todo: would be better to keep them final and not require width, but how to properly set width of the template keyboard?
         //  an alternative would be to always create the templateKeyboard with full width
         final int paddingWidth = mOccupiedWidth - mBaseWidth;
         mBaseWidth = width - paddingWidth;
         mOccupiedWidth = width;
-        final float spacerWidth = Settings.getValues().mSplitKeyboardSpacerRelativeWidth * mBaseWidth;
         final Key key0 = getTemplateKey(Constants.RECENTS_TEMPLATE_KEY_CODE_0);
         final Key key1 = getTemplateKey(Constants.RECENTS_TEMPLATE_KEY_CODE_1);
         final int horizontalGap = Math.abs(key1.getX() - key0.getX()) - key0.getWidth();
@@ -78,32 +68,8 @@ final class DynamicGridKeyboard extends Keyboard {
         mHorizontalStep = (int) ((key0.getWidth() + horizontalGap) * widthScale);
         mVerticalStep = (int) ((key0.getHeight() + mVerticalGap) / Math.sqrt(Settings.getValues().mKeyboardHeightScale));
         mColumnsNum = mBaseWidth / mHorizontalStep;
-        if (spacerWidth > 0)
-            setSpacerColumns(spacerWidth);
         mMaxKeyCount = fixedRowCount? maxCount * getOccupiedColumnCount() : maxCount;
         mFixedRowCount = fixedRowCount;
-        mIsRecents = isRecents;
-    }
-
-    private void setSpacerColumns(final float spacerWidth) {
-        int spacerColumnsWidth = (int) (spacerWidth / mHorizontalStep);
-        if (spacerColumnsWidth == 0) return;
-        if (mColumnsNum % 2 != spacerColumnsWidth % 2)
-            spacerColumnsWidth++;
-        final int leftmost;
-        final int rightmost;
-        if (spacerColumnsWidth % 2 == 0) {
-            int center = mColumnsNum / 2;
-            leftmost = center - (spacerColumnsWidth / 2 - 1);
-            rightmost = center + spacerColumnsWidth / 2;
-        } else {
-            int center = mColumnsNum / 2 + 1;
-            leftmost = center - spacerColumnsWidth / 2;
-            rightmost = center + spacerColumnsWidth / 2;
-        }
-        for (int i = leftmost; i <= rightmost; i++) {
-            mEmptyColumnIndices.add(i - 1);
-        }
     }
 
     // determine a width scale so emojis evenly fill the entire width
@@ -133,46 +99,6 @@ final class DynamicGridKeyboard extends Keyboard {
         return mColumnsNum - mEmptyColumnIndices.size();
     }
 
-    public void addPendingKey(final Key usedKey) {
-        synchronized (mLock) {
-            mPendingKeys.addLast(usedKey);
-        }
-    }
-
-    public boolean isRecents() {
-        return mIsRecents;
-    }
-
-    public void removeRecentsKey(Key key) {
-        String outputText = key.getOutputText();
-        if (outputText != null) RecentEmojis.remove(outputText);
-        else RecentEmojis.removeCodepoint(key.getCode());
-        if (!(key instanceof GridKey)) return;
-        synchronized (mLock) {
-            mGridKeys.remove(key);
-            mCachedGridKeys = null;
-            updateCoordinates();
-        }
-    }
-
-    public void flushPendingRecentKeys() {
-        synchronized (mLock) {
-            while (!mPendingKeys.isEmpty()) {
-                Key key = mPendingKeys.pollFirst();
-                addKey(key, true);
-                saveRecentKey(key);
-            }
-        }
-    }
-
-    public void addKeyFirst(Key usedKey) {
-        if (usedKey.getCode() == KeyCode.UNSPECIFIED) return;
-        addKey(usedKey, true);
-        if (mIsRecents) {
-            saveRecentKey(usedKey);
-        }
-    }
-
     public void addKeyLast(final Key usedKey) {
         addKey(usedKey, false);
     }
@@ -180,7 +106,6 @@ final class DynamicGridKeyboard extends Keyboard {
     public void removeAllKeys() {
         synchronized (mLock) {
             mGridKeys.clear();
-            mPendingKeys.clear();
             mCachedGridKeys = null;
         }
     }
@@ -191,15 +116,7 @@ final class DynamicGridKeyboard extends Keyboard {
         }
         synchronized (mLock) {
             mCachedGridKeys = null;
-            // When a key is added to recents keyboard, we don't want to keep its popup keys
-            // neither its hint label. Also, we make sure its background type is matching our keyboard
-            // if key comes from another keyboard (ie. a {@link PopupKeysKeyboard}).
-            // Check if hint was a more emoji indicator and prevent its copy if popup keys aren't copied
-            boolean dropHintLabel = mIsRecents && EMOJI_HINT_LABEL.equals(usedKey.getHintLabel());
-            GridKey key = new GridKey(usedKey,
-                    mIsRecents ? REMOVE_RECENT_POPUP_KEYS : usedKey.getPopupKeys(),
-                    dropHintLabel ? null : usedKey.getHintLabel(),
-                    mIsRecents ? Key.BACKGROUND_TYPE_EMPTY : usedKey.getBackgroundType());
+            GridKey key = new GridKey(usedKey, usedKey.getPopupKeys(), usedKey.getHintLabel(), usedKey.getBackgroundType());
             while (mGridKeys.remove(key)) {
                 // Remove duplicate keys.
             }
@@ -227,55 +144,6 @@ final class DynamicGridKeyboard extends Keyboard {
             int keyY1 = getKeyY1(index);
             gridKey.updateCoordinates(keyX0, keyY0, keyX1, keyY1);
             index++;
-        }
-    }
-
-    private void saveRecentKey(@Nullable Key key) {
-        if (key == null) return;
-        String outputText = key.getOutputText();
-        if (outputText != null) RecentEmojis.add(outputText);
-        else RecentEmojis.addCodepoint(key.getCode());
-    }
-
-    private Key getKeyByCode(final Collection<DynamicGridKeyboard> keyboards,
-            final int code) {
-        for (final DynamicGridKeyboard keyboard : keyboards) {
-            for (final Key key : keyboard.getSortedKeys()) {
-                if (key.getCode() == code) {
-                    return key;
-                }
-            }
-        }
-
-        // fall back to creating the key
-        return new Key(getTemplateKey(Constants.RECENTS_TEMPLATE_KEY_CODE_0), null, null, Key.BACKGROUND_TYPE_EMPTY, code, null);
-    }
-
-    private Key getKeyByOutputText(final Collection<DynamicGridKeyboard> keyboards,
-            final String outputText) {
-        for (final DynamicGridKeyboard keyboard : keyboards) {
-            for (final Key key : keyboard.getSortedKeys()) {
-                if (outputText.equals(key.getOutputText())) {
-                    return key;
-                }
-            }
-        }
-
-        // fall back to creating the key
-        return new Key(getTemplateKey(Constants.RECENTS_TEMPLATE_KEY_CODE_0), null, null, Key.BACKGROUND_TYPE_EMPTY, 0, outputText);
-    }
-
-    public void loadRecentKeys(Collection<DynamicGridKeyboard> keyboards) {
-        List<String> emojis = RecentEmojis.get();
-        for (String emoji : emojis) {
-            Key key;
-            if (StringUtils.codePointCount(emoji) == 1) {
-                int code = Character.codePointAt(emoji, 0);
-                key = getKeyByCode(keyboards, code);
-            } else {
-                key = getKeyByOutputText(keyboards, emoji);
-            }
-            addKeyLast(key);
         }
     }
 
@@ -311,12 +179,6 @@ final class DynamicGridKeyboard extends Keyboard {
             return mCachedGridKeys;
         }
     }
-
-    // Single delete button shown when long-pressing a key in the recents category.
-    private static final PopupKeySpec[] REMOVE_RECENT_POPUP_KEYS = {
-        new PopupKeySpec(KeyboardIconsSet.PREFIX_ICON + KeyboardIconsSet.NAME_BIN
-            + "|!code/" + KeyCode.UNSPECIFIED, false, Locale.ROOT)
-    };
 
     @NonNull
     @Override

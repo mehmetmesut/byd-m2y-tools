@@ -33,15 +33,9 @@ public interface DictionaryFacilitator {
 
     String[] ALL_DICTIONARY_TYPES = new String[] {
             Dictionary.TYPE_MAIN,
-            Dictionary.TYPE_CONTACTS,
-            Dictionary.TYPE_APPS,
-            Dictionary.TYPE_USER_HISTORY,
             Dictionary.TYPE_USER};
 
     String[] DYNAMIC_DICTIONARY_TYPES = new String[] {
-            Dictionary.TYPE_CONTACTS,
-            Dictionary.TYPE_APPS,
-            Dictionary.TYPE_USER_HISTORY,
             Dictionary.TYPE_USER};
 
     /** The facilitator will put words into the cache whenever it decodes them. */
@@ -86,26 +80,15 @@ public interface DictionaryFacilitator {
     /** the most "trusted" locale, differs from getMainLocale only if multilingual typing is used */
     @NonNull Locale getCurrentLocale();
 
-    boolean usesSameSettings(
-            @NonNull final List<Locale> locales,
-            final boolean contacts,
-            final boolean apps,
-            final boolean personalization
-    );
+    boolean usesSameSettings(@NonNull final List<Locale> locales);
 
     /** switches to newLocale, gets secondary locales from current settings, and sets secondary dictionaries */
     void resetDictionaries(
             final Context context,
             final Locale newLocale,
-            final boolean useContactsDict,
-            final boolean useAppsDict,
-            final boolean usePersonalizedDicts,
             final boolean forceReloadMainDictionary,
             final String dictNamePrefix,
             @Nullable final DictionaryInitializationListener listener);
-
-    /** removes the word from all editable dictionaries, and adds it to a blacklist in case it's in a read-only dictionary */
-    void removeWord(String word);
 
     void closeDictionaries();
 
@@ -119,19 +102,11 @@ public interface DictionaryFacilitator {
     void waitForLoadingMainDictionaries(final long timeout, final TimeUnit unit)
             throws InterruptedException;
 
-    /** adds the word to user history dictionary, calls adjustConfindences, and might add it to personal dictionary if the setting is enabled */
-    void addToUserHistory(final String suggestion, final boolean wasAutoCapitalized,
-            @NonNull final NgramContext ngramContext, final long timeStampInSeconds,
-            final boolean blockPotentiallyOffensive);
-
     /** adjust confidences for multilingual typing */
     void adjustConfidences(final String word, final boolean wasAutoCapitalized);
 
     /** a string with all used locales and their current confidences, null if multilingual typing is not used */
     @Nullable String localesAndConfidences();
-
-    /** completely removes the word from user history (currently not if event is a backspace event) */
-    void unlearnFromUserHistory(String word, @NonNull NgramContext ngramContext, long timeStampInSeconds, UnlearnEvent event);
 
     @NonNull SuggestionResults getSuggestionResults(final ComposedData composedData,
             final NgramContext ngramContext, @NonNull final Keyboard keyboard,
@@ -142,13 +117,9 @@ public interface DictionaryFacilitator {
 
     boolean isValidSuggestionWord(final String word);
 
-    void clearUserHistoryDictionary(final Context context);
-
     String dump(final Context context);
 
     void dumpDictionaryForDebug(final String dictName);
 
     @NonNull List<DictionaryStats> getDictionaryStats(final Context context);
-
-    enum UnlearnEvent { BACKSPACE, REJECTION, REVERT }
 }

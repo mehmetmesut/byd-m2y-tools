@@ -66,8 +66,6 @@ public final class EmojiPageKeyboardView extends KeyboardView implements
         public String getDescription(String emoji) {
             return null;
         }
-        @Override
-        public void onRemoveRecentsKey(final Key key) {}
     };
 
     private EmojiViewCallback mEmojiViewCallback = EMPTY_EMOJI_VIEW_CALLBACK;
@@ -320,8 +318,7 @@ public final class EmojiPageKeyboardView extends KeyboardView implements
             (popupKeysPanel != null ? popupKeysPanel : descriptionPanel)
                 .showPopupKeysPanel(this, this, pointX, pointY,
                     (popupKey) -> {
-                        if (keyboard.isRecents()) mEmojiViewCallback.onRemoveRecentsKey(key);
-                        else mEmojiViewCallback.onReleaseKey(popupKey);
+                        mEmojiViewCallback.onReleaseKey(popupKey);
                         return Unit.INSTANCE;
                     }
                 );

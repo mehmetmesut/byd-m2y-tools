@@ -1,9 +1,13 @@
 [
   [
     { "label": "alpha", "width": 0.15 },
+    { "code": -202, "label": "?123", "type": "function", "width": 0.1 },
+    { "code": -205, "label": "#+=", "type": "function", "width": 0.1 },
+    { "label": "emoji", "width": 0.1 },
     { "$": "keyboard_state_selector", "emojiSearchAvailable": { "label": "emoji_search", "width": 0.15 }},
     { "label": "space", "width": -1 },
     { "label": "delete", "width": 0.15 },
-    { "label": "action", "width": 0.15 }
+    { "label": "action", "width": 0.15 },
+    { "code": -232, "label": "!icon/hide_key", "type": "function", "width": 0.1 }
   ]
 ]

@@ -34,13 +34,13 @@
   ],
   [
     { "label": "alpha" },
-    { "label": "<", "type": "function", "popup": { "main":  { "label": "≤" } } },
-    { "label": ">", "type": "function", "popup": { "main":  { "label": "≥" } } },
+    { "code": -202, "label": "?123", "type": "function" },
+    { "code": -205, "label": "#+=", "type": "function" },
+    { "label": "emoji" },
     { "label": "comma", "type": "numeric", "width": 0.3, "labelFlags": 1073741824 },
     { "label": "0", "type": "numeric", "width": 0.3 },
     { "label": "period", "type": "numeric", "width": 0.3 },
     { "label": "=", "type": "function", "popup": { "relevant": [ { "label": "≠"}, { "label": "≈"} ] } },
-    { "label": "=", "type": "function", "popup": { "relevant": [ { "label": "≠"}, { "label": "≈"} ] } },
-    { "label": "symbol" }
+    { "code": -232, "label": "!icon/hide_key", "type": "function" }
   ]
 ]

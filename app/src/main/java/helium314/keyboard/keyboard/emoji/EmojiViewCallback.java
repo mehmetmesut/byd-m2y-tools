@@ -26,6 +26,4 @@ public interface EmojiViewCallback {
      * Called from keyboard view to get an emoji description
      */
     String getDescription(String emoji);
-
-    void onRemoveRecentsKey(Key key);
 }

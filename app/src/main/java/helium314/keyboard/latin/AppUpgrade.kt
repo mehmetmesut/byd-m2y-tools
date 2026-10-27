@@ -6,15 +6,9 @@ import android.content.Context
 import androidx.core.content.edit
 import helium314.keyboard.compat.isDeviceLocked
 import helium314.keyboard.compat.isUserLocked
-import helium314.keyboard.keyboard.ColorSetting
-import helium314.keyboard.keyboard.KeyboardTheme
-import helium314.keyboard.keyboard.emoji.RecentEmojis
-import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode.checkAndConvertCode
-import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.common.Constants.Subtype.ExtraValue
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
-import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.common.encodeBase36
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.settings.Defaults
@@ -25,7 +19,6 @@ import helium314.keyboard.latin.settings.createPrefKeyForBooleanSettings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
 import helium314.keyboard.latin.utils.DictionaryInfoUtils.USER_DICTIONARY_SUFFIX
-import helium314.keyboard.latin.utils.JsonUtils
 import helium314.keyboard.latin.utils.LayoutType
 import helium314.keyboard.latin.utils.LayoutType.Companion.folder
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
@@ -34,20 +27,14 @@ import helium314.keyboard.latin.utils.ScriptUtils.SCRIPT_LATIN
 import helium314.keyboard.latin.utils.ScriptUtils.script
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
-import helium314.keyboard.latin.utils.ToolbarKey
-import helium314.keyboard.latin.utils.defaultPinnedToolbarPref
 import helium314.keyboard.latin.utils.getResourceSubtypes
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.mainLayoutNameOrQwerty
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.protectedPrefs
-import helium314.keyboard.latin.utils.upgradeToolbarPrefs
-import helium314.keyboard.latin.utils.writeCustomKeyCodes
-import helium314.keyboard.settings.screens.colorPrefsAndResIds
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.util.EnumMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -117,36 +104,6 @@ private object AppUpgrade {
                 prefs.edit { remove("selected_input_style").putString(Settings.PREF_SELECTED_SUBTYPE, selectedSubtype) }
             }
         }
-        if (oldVersion <= 2000) {
-            // upgrade pinned toolbar keys pref
-            val oldPinnedKeysPref = prefs.getString(Settings.PREF_PINNED_TOOLBAR_KEYS, "")!!
-            val pinnedKeys = oldPinnedKeysPref.split(";").mapNotNull {
-                try {
-                    ToolbarKey.valueOf(it)
-                } catch (_: IllegalArgumentException) {
-                    null
-                }
-            }
-            val newPinnedKeysPref = (pinnedKeys.map { "${it.name},true" } + defaultPinnedToolbarPref.split(";"))
-                .distinctBy { it.split(",").first() }
-                .joinToString(";")
-            prefs.edit { putString(Settings.PREF_PINNED_TOOLBAR_KEYS, newPinnedKeysPref) }
-
-            // enable language switch key if it was enabled previously
-            if (prefs.contains(Settings.PREF_LANGUAGE_SWITCH_KEY) && prefs.getString(Settings.PREF_LANGUAGE_SWITCH_KEY, "") != "off")
-                prefs.edit { putBoolean(Settings.PREF_SHOW_LANGUAGE_SWITCH_KEY, true) }
-        }
-        if (oldVersion <= 2100) {
-            if (prefs.contains("show_more_colors")) {
-                val moreColors = prefs.getInt("show_more_colors", 0)
-                prefs.edit {
-                    putInt("theme_color_show_more_colors", moreColors)
-                    if (prefs.getBoolean(Settings.PREF_THEME_DAY_NIGHT, false))
-                        putInt("theme_dark_color_show_more_colors", moreColors)
-                    remove("show_more_colors")
-                }
-            }
-        }
         if (oldVersion <= 2201) {
             val additionalSubtypeString = prefs.getString(Settings.PREF_ADDITIONAL_SUBTYPES, Defaults.PREF_ADDITIONAL_SUBTYPES)!!
             if (additionalSubtypeString.contains(".")) { // means there are custom layouts
@@ -183,94 +140,6 @@ private object AppUpgrade {
                 if (newFile.exists()) newFile.delete() // should never happen
                 it.renameTo(newFile)
             }
-        }
-        if (oldVersion <= 2301) {
-            // upgrade and remove old color prefs
-            fun readAllColorsMap(isNight: Boolean): EnumMap<ColorType, Int> {
-                val prefPrefix = if (isNight) "theme_dark_color_" else "theme_color_"
-                val colorsString = prefs.getString(prefPrefix + "all_colors", "") ?: ""
-                val colorMap = EnumMap<ColorType, Int>(ColorType::class.java)
-                colorsString.split(";").forEach {
-                    val ct = try {
-                        ColorType.valueOf(it.substringBefore(",").uppercase())
-                    } catch (_: Exception) {
-                        return@forEach
-                    }
-                    val i = it.substringAfter(",").toIntOrNull() ?: return@forEach
-                    colorMap[ct] = i
-                }
-                return colorMap
-            }
-            // day colors
-            val themeNameDay = context.getString(R.string.theme_name_user)
-            val colorsDay = colorPrefsAndResIds.map {
-                val pref = "theme_color_" + it.first
-                val color = if (prefs.contains(pref)) prefs.getInt(pref, 0) else null
-                val result = ColorSetting(it.first, prefs.getBoolean(pref + "_auto", true), color)
-                prefs.edit { remove(pref).remove(pref + "_auto") }
-                result
-            }
-            if (colorsDay.any { it.color != null }) {
-                KeyboardTheme.writeUserColors(prefs, themeNameDay, colorsDay)
-            }
-            if (prefs.contains("theme_color_show_more_colors")) {
-                val moreColorsDay = prefs.getInt("theme_color_show_more_colors", 0)
-                prefs.edit { remove("theme_color_show_more_colors") }
-                KeyboardTheme.writeUserMoreColors(prefs, themeNameDay, moreColorsDay)
-            }
-            if (prefs.contains("theme_color_all_colors")) {
-                val allColorsDay = readAllColorsMap(false)
-                prefs.edit { remove("theme_color_all_colors") }
-                KeyboardTheme.writeUserAllColors(prefs, themeNameDay, allColorsDay)
-            }
-            if (prefs.getString(Settings.PREF_THEME_COLORS, Defaults.PREF_THEME_COLORS) == "user")
-                prefs.edit { putString(Settings.PREF_THEME_COLORS, themeNameDay) }
-
-            // same for night colors
-            val themeNameNight = "User-Defined (night)"
-            val colorsNight = colorPrefsAndResIds.map {
-                val pref = "theme_dark_color_" + it.first
-                val color = if (prefs.contains(pref)) prefs.getInt(pref, 0) else null
-                val result = ColorSetting(it.first, prefs.getBoolean(pref + "_auto", true), color)
-                prefs.edit { remove(pref).remove(pref + "_auto") }
-                result
-            }
-            if (colorsNight.any { it.color!= null }) {
-                KeyboardTheme.writeUserColors(prefs, themeNameNight, colorsNight)
-            }
-            if (prefs.contains("theme_dark_color_show_more_colors")) {
-                val moreColorsNight = prefs.getInt("theme_dark_color_show_more_colors", 0)
-                prefs.edit { remove("theme_dark_color_show_more_colors") }
-                KeyboardTheme.writeUserMoreColors(prefs, themeNameNight, moreColorsNight)
-            }
-            if (prefs.contains("theme_dark_color_all_colors")) {
-                val allColorsNight = readAllColorsMap(true)
-                prefs.edit { remove("theme_dark_color_all_colors") }
-                KeyboardTheme.writeUserAllColors(prefs, themeNameNight, allColorsNight)
-            }
-            if (prefs.getString(Settings.PREF_THEME_COLORS_NIGHT, Defaults.PREF_THEME_COLORS_NIGHT) == "user_night")
-                prefs.edit { putString(Settings.PREF_THEME_COLORS_NIGHT, themeNameNight) }
-        }
-        if (oldVersion <= 2302) {
-            fun readCustomKeyCodes(setting: String) =
-                prefs.getString(setting, "")!!
-                    .split(";").filter { it.isNotEmpty()}.associate {
-                        val code = runCatching { it.substringAfter(",").toIntOrNull()?.checkAndConvertCode() }.getOrNull()
-                        it.substringBefore(",") to code
-                    }
-            val customCodes = readCustomKeyCodes("toolbar_custom_key_codes")
-            val customLongpressCodes = readCustomKeyCodes("toolbar_custom_longpress_codes")
-            prefs.edit { remove("toolbar_custom_longpress_codes").remove("toolbar_custom_key_codes") }
-            val combined = EnumMap<ToolbarKey, Pair<Int?, Int?>>(ToolbarKey::class.java)
-            customCodes.forEach { runCatching {
-                val key = ToolbarKey.valueOf(it.key)
-                combined[key] = (combined[key] ?: (null to null)).copy(first = it.value)
-            } }
-            customLongpressCodes.forEach { runCatching {
-                val key = ToolbarKey.valueOf(it.key)
-                combined[key] = (combined[key] ?: (null to null)).copy(second = it.value)
-            } }
-            writeCustomKeyCodes(prefs, combined)
         }
         if (oldVersion <= 2303) {
             File(DeviceProtectedUtils.getFilesDir(context), "layouts").listFiles()?.forEach { file ->
@@ -412,7 +281,7 @@ private object AppUpgrade {
         }
         if (oldVersion <= 2305) {
             (prefs.all.keys.filter { it.startsWith(Settings.PREF_POPUP_KEYS_ORDER) || it.startsWith(Settings.PREF_POPUP_KEYS_HINT_ORDER) } +
-                listOf(Settings.PREF_TOOLBAR_KEYS, Settings.PREF_PINNED_TOOLBAR_KEYS, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS)).forEach {
+                listOf("toolbar_keys", "pinned_toolbar_keys", "clipboard_toolbar_keys")).forEach {
                 if (!prefs.contains(it)) return@forEach
                 val newValue = prefs.getString(it, "")!!.replace(",", Separators.KV).replace(";", Separators.ENTRY)
                 prefs.edit { putString(it, newValue) }
@@ -565,17 +434,6 @@ private object AppUpgrade {
                 }
             }
         }
-        if (oldVersion <= 3001 && prefs.getInt(Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME, Defaults.PREF_CLIPBOARD_HISTORY_RETENTION_TIME) <= 0) {
-            prefs.edit { putInt(Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME, 121) }
-        }
-        if (oldVersion <= 3002) {
-            prefs.all.filterKeys { it.startsWith(Settings.PREF_USER_ALL_COLORS_PREFIX) }.forEach {
-                val oldValue = prefs.getString(it.key, "")!!
-                if ("KEY_PREVIEW" !in oldValue) return@forEach
-                val newValue = oldValue.replace("KEY_PREVIEW", "KEY_PREVIEW_BACKGROUND")
-                prefs.edit { putString(it.key, newValue) }
-            }
-        }
         if (oldVersion <= 3101) {
             @SuppressLint("UseKtx") val e = prefs.edit()
             prefs.all.toMap().forEach { (key, value) ->
@@ -593,18 +451,6 @@ private object AppUpgrade {
                     e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, 0, 1), value as Float)
                 } else if (key == "split_spacer_scale_landscape") {
                     e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, 1, 1), value as Float)
-                } else if (key == "one_handed_mode_enabled_p_true") {
-                    e.putBoolean(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_MODE_PREFIX, 0, 2), value as Boolean)
-                } else if (key == "one_handed_mode_enabled_p_false") {
-                    e.putBoolean(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_MODE_PREFIX, 1, 2), value as Boolean)
-                } else if (key == "one_handed_mode_scale_p_true") {
-                    e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_SCALE_PREFIX, 0, 2), value as Float)
-                } else if (key == "one_handed_mode_scale_p_false") {
-                    e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_SCALE_PREFIX, 1, 2), value as Float)
-                } else if (key == "one_handed_mode_gravity_p_true") {
-                    e.putInt(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_GRAVITY_PREFIX, 0, 2), value as Int)
-                } else if (key == "one_handed_mode_gravity_p_false") {
-                    e.putInt(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_GRAVITY_PREFIX, 1, 2), value as Int)
                 } else if (key == "keyboard_height_scale") {
                     e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, 1, 1), value as Float)
                     e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, 1, 1), value)
@@ -627,12 +473,6 @@ private object AppUpgrade {
             }
             e.apply()
         }
-        if (oldVersion <= 3201) {
-            prefs.edit {
-                putBoolean(Settings.PREF_SUGGEST_PUNCTUATION,
-                    !prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, Defaults.PREF_BIGRAM_PREDICTIONS))
-            }
-        }
         if (oldVersion <= 3901) {
             prefs.edit {
                 val prefixes2 = listOf(Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, Settings.PREF_BOTTOM_PADDING_SCALE_PREFIX,
@@ -647,7 +487,7 @@ private object AppUpgrade {
                         }
                     }
                 }
-                val prefixes3 = listOf(Settings.PREF_SIDE_PADDING_SCALE_PREFIX, Settings.PREF_ONE_HANDED_SCALE_PREFIX)
+                val prefixes3 = listOf(Settings.PREF_SIDE_PADDING_SCALE_PREFIX)
                 prefixes3.forEach { prefix ->
                     for (i in 0..3) {
                         val key = createPrefKeyForBooleanSettings(prefix, i, 2)
@@ -656,20 +496,6 @@ private object AppUpgrade {
                             putFloat(newKey, prefs.getFloat(key, 0f))
                             remove(key)
                         }
-                    }
-                }
-                for (i in 0..3) {
-                    val keyA = createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_MODE_PREFIX, i, 2)
-                    val keyB = createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_GRAVITY_PREFIX, i, 2)
-                    if (prefs.contains(keyA)) {
-                        val newKey = createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_MODE_PREFIX, i, 3)
-                        putBoolean(newKey, prefs.getBoolean(keyA, false))
-                        remove(keyA)
-                    }
-                    if (prefs.contains(keyB)) {
-                        val newKey = createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_GRAVITY_PREFIX, i, 3)
-                        putInt(newKey, prefs.getInt(keyB, 0))
-                        remove(keyB)
                     }
                 }
             }
@@ -700,15 +526,8 @@ private object AppUpgrade {
                 remove("narrow_key_gaps")
             }
         }
-        if (oldVersion <= 4005) {
-            if (prefs.contains("emoji_recent_keys")) {
-                val old = JsonUtils.jsonStrToList(prefs.getString("emoji_recent_keys", ""))
-                    .mapNotNull { it as? String ?: (it as? Int)?.let { StringUtils.newSingleCodePointString(it) } }
-                RecentEmojis.set(old)
-                prefs.edit { remove("emoji_recent_keys")  }
-            }
-        }
-        upgradeToolbarPrefs(prefs)
+        prefs.edit { remove("emoji_recent_keys"); remove("recent_emojis") } // M2Y Board: recent emojis are not kept
+        prefs.edit { REMOVED_PREFS.forEach { remove(it) } } // M2Y Board: fixed settings no longer stored
         LayoutUtilsCustom.onLayoutFileChanged() // just to be sure
         prefs.edit { putInt(Settings.PREF_VERSION_CODE, BuildConfig.VERSION_CODE) }
     }
@@ -717,3 +536,6 @@ private object AppUpgrade {
     private fun getCustomLayoutFile(layoutName: String, context: Context): File =
         File(File(DeviceProtectedUtils.getFilesDir(context), "layouts"), layoutName)
 }
+
+// M2Y Board: preferences of settings that are now fixed
+private val REMOVED_PREFS = listOf("toolbar_custom_key_codes", "sound_on", "suggest_emojis", "inline_emoji_search", "center_suggestion_text_to_enter", "show_suggestions", "always_show_suggestions", "always_show_suggestions_except_web_text", "var_toolbar_direction", "next_word_prediction", "suggest_punctuation", "punctuation_suggestions", "suggest_clipboard_content", "keypress_sound_volume", "show_hints", "enable_clipboard_history", "clipboard_history_retention_time", "clipboard_history_pinned_first", "quick_pin_toolbar_keys", "pinned_toolbar_keys", "toolbar_keys", "auto_show_toolbar", "auto_hide_toolbar", "clipboard_toolbar_keys", "toolbar_mode", "toolbar_hiding_global", "toolbar_swipe_down_to_hide", "spellcheck_suggest", "only_toolbar_with_hw_keyboard", "debug_mode", "long_press_symbols_for_numpad", "abc_after_clip", "abc_after_emoji", "abc_after_numpad_space", "abc_after_symbol_space", "delete_swipe", "enable_emoji_alt_physical_key", "enable_hardware_keyboard", "key_longpress_timeout", "language_swipe_distance", "language_switch_key", "remove_redundant_popups", "show_dpad_key", "show_emoji_descriptions", "show_number_row_hints", "show_number_row_in_symbols", "show_popup_hints", "show_tld_popup_keys", "prefs_long_press_keyboard_to_change_lang", "touchpad_edge_scroll", "touchpad_sensitivity", "url_detection", "vibrate_in_dnd_mode", "vibration_duration_settings", "vibrate_on", "horizontal_space_swipe", "vertical_space_swipe", "force_non_distinct_multitouch", "sliding_key_input_preview", "show_debug_settings", "show_suggestion_infos")

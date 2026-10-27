@@ -20,14 +20,12 @@ import helium314.keyboard.latin.EmojiAltPhysicalKeyDetector
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.common.Constants
-import helium314.keyboard.latin.common.InputPointers
 import helium314.keyboard.latin.common.combiningRange
 import helium314.keyboard.latin.common.moveStepsToCharCount
 import helium314.keyboard.latin.inputlogic.InputLogic
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.RecapitalizeMode
 import helium314.keyboard.latin.utils.SubtypeSettings
-import helium314.keyboard.latin.utils.prefs
 import kotlin.math.abs
 
 class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inputLogic: InputLogic) : KeyboardActionListener {
@@ -102,11 +100,6 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
 
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
         when (primaryCode) {
-            KeyCode.TOGGLE_AUTOCORRECT -> return settings.toggleAutoCorrect()
-            KeyCode.TOGGLE_INCOGNITO_MODE -> {
-                settings.toggleAlwaysIncognitoMode()
-                return
-            }
         }
         if (Settings.getValues().mIsLocked && KeyCode.isIsBlockedWhenLocked(primaryCode))
             return
@@ -139,14 +132,6 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
             latinIME.clipboardHistoryManager.pasteWithoutChangingClips(content)
         }
     }
-
-    override fun onStartBatchInput() = latinIME.onStartBatchInput()
-
-    override fun onUpdateBatchInput(batchPointers: InputPointers?) = latinIME.onUpdateBatchInput(batchPointers)
-
-    override fun onEndBatchInput(batchPointers: InputPointers?) = latinIME.onEndBatchInput(batchPointers)
-
-    override fun onCancelBatchInput() = latinIME.onCancelBatchInput()
 
     // User released a finger outside any key
     override fun onCancelInput() { }

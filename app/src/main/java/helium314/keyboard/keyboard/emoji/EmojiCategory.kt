@@ -33,14 +33,12 @@ internal class EmojiCategory(private val context: Context, private val layoutSet
     }
 
     private val prefs = context.prefs()
-    private val maxRecentsKeyCount = context.resources.getInteger(R.integer.config_emoji_keyboard_max_recents_key_count)
 
     private val categoryTabIconId = IntArray(Category.entries.size) { i ->
         emojiPaletteViewAttr.getResourceId(Category.entries[i].iconAttr, 0)
     }
 
     val shownCategories = listOfNotNull(
-        CategoryProperties(Category.RECENTS),
         CategoryProperties(Category.SMILEYS),
         CategoryProperties(Category.PEOPLE),
         CategoryProperties(Category.NATURE),
@@ -68,13 +66,10 @@ internal class EmojiCategory(private val context: Context, private val layoutSet
         }
 
     fun initialize() {
-        val recentsKbd = getKeyboard(Category.RECENTS, 0)
         currentCategory = Category.entries[prefs.getInt(Settings.PREF_LAST_SHOWN_EMOJI_CATEGORY_ID, defaultCategory.ordinal)]
         currentCategoryPageId =
             prefs.getInt(Settings.PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID, Defaults.PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID)
         if (shownCategories.none { it.category == currentCategory }) {
-            currentCategory = defaultCategory
-        } else if (currentCategory == Category.RECENTS && recentsKbd.sortedKeys.isEmpty()) {
             currentCategory = defaultCategory
         }
 
@@ -101,14 +96,10 @@ internal class EmojiCategory(private val context: Context, private val layoutSet
         return 0
     }
 
-    val isInRecentTab get() = currentCategory == Category.RECENTS
-
     fun getTabIdFromCategoryId(category: Category): Int {
         val i = shownCategories.indexOfFirst { it.category == category }
         return if (i == -1) 0 else i
     }
-
-    val recentTabId get() = getTabIdFromCategoryId(Category.RECENTS)
 
     private fun computeCategoryPageCount(category: Category): Int {
         val keyboard = layoutSet.getKeyboard(category.element)
@@ -124,32 +115,19 @@ internal class EmojiCategory(private val context: Context, private val layoutSet
         return getKeyboard(category, 0)
     }
 
-    fun reloadRecents() = categoryKeyboardMap[getCategoryKeyboardMapKey(Category.RECENTS, 0)]?.loadRecentKeys(categoryKeyboardMap.values)
-
     fun getKeyboard(category: Category, id: Int): DynamicGridKeyboard {
         synchronized(categoryKeyboardMap) {
             val categoryKeyboardMapKey = getCategoryKeyboardMapKey(category, id)
             categoryKeyboardMap[categoryKeyboardMapKey]?.let { return it }
 
             val currentWidth = ResourceUtils.getKeyboardWidth(context, Settings.getValues())
-            if (category == Category.RECENTS) {
-                val kbd = DynamicGridKeyboard.ofKeyCount(
-                    prefs,
-                    layoutSet.getKeyboard(KeyboardElement.EMOJI_RECENTS),
-                    maxRecentsKeyCount, category == Category.RECENTS, currentWidth
-                )
-                categoryKeyboardMap[categoryKeyboardMapKey] = kbd
-                kbd.loadRecentKeys(categoryKeyboardMap.values)
-                return kbd
-            }
-
             val keyboard = layoutSet.getKeyboard(category.element)
             val keyCountPerPage = computeMaxKeyCountPerPage()
             val sortedKeysPages = sortKeysGrouped(keyboard.sortedKeys, keyCountPerPage)
             for (pageId in sortedKeysPages.indices) {
                 val tempKeyboard = DynamicGridKeyboard.ofKeyCount(prefs,
                     layoutSet.getKeyboard(KeyboardElement.EMOJI_RECENTS),
-                    keyCountPerPage, category == Category.RECENTS, currentWidth)
+                    keyCountPerPage, currentWidth)
                 for (emojiKey in sortedKeysPages[pageId]) {
                     if (emojiKey == null) {
                         break
@@ -165,7 +143,7 @@ internal class EmojiCategory(private val context: Context, private val layoutSet
     private fun computeMaxKeyCountPerPage(): Int {
         val tempKeyboard = DynamicGridKeyboard.ofKeyCount(prefs,
             layoutSet.getKeyboard(KeyboardElement.EMOJI_RECENTS),
-            0, true, ResourceUtils.getKeyboardWidth(context, Settings.getValues())
+            0, ResourceUtils.getKeyboardWidth(context, Settings.getValues())
         )
         return MAX_LINE_COUNT_PER_PAGE * tempKeyboard.occupiedColumnCount
     }

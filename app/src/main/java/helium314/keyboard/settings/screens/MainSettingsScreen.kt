@@ -17,7 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import helium314.keyboard.latin.R
-import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.NextScreenIcon
@@ -30,10 +29,7 @@ import helium314.keyboard.latin.utils.previewDark
 @Composable
 fun MainSettingsScreen(
     onClickAbout: () -> Unit,
-    onClickTextCorrection: () -> Unit,
-    onClickPreferences: () -> Unit,
-    onClickToolbar: () -> Unit,
-    onClickAppearance: () -> Unit,
+    onClickPersonalDictionary: () -> Unit,
     onClickLanguage: () -> Unit,
     onClickBack: () -> Unit,
 ) {
@@ -53,27 +49,13 @@ fun MainSettingsScreen(
                     onClick = onClickLanguage,
                     icon = R.drawable.ic_settings_languages
                 ) { NextScreenIcon() }
+                // M2Y Board: the driver's fixed words (name, e-mail…) with optional shortcuts
                 Preference(
-                    name = stringResource(R.string.settings_screen_preferences),
-                    onClick = onClickPreferences,
-                    icon = R.drawable.ic_settings_preferences
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_appearance),
-                    onClick = onClickAppearance,
-                    icon = R.drawable.ic_settings_appearance
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_toolbar),
-                    onClick = onClickToolbar,
-                    icon = R.drawable.ic_settings_toolbar
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_correction),
-                    onClick = onClickTextCorrection,
+                    name = stringResource(R.string.edit_personal_dictionary),
+                    onClick = onClickPersonalDictionary,
                     icon = R.drawable.ic_settings_correction
                 ) { NextScreenIcon() }
-                // M2Y Board: advanced, layout, dictionary and gesture screens removed; those settings keep their defaults
+                // M2Y Board: all other settings are fixed; only languages, personal dictionary and about remain
                 Preference(
                     name = stringResource(R.string.settings_screen_about),
                     onClick = onClickAbout,
@@ -90,7 +72,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {})
         }
     }
 }

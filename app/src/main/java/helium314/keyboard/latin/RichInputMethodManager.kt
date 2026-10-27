@@ -150,10 +150,8 @@ class RichInputMethodManager private constructor() {
         LanguageOnSpacebarUtils.onSubtypeChanged(richSubtype, implicitlyEnabledSubtype, systemLocale)
         LanguageOnSpacebarUtils.setEnabledSubtypes(SubtypeSettings.getEnabledSubtypes(true))
 
-        // TODO: Update an icon for shortcut IME
-        shortcuts = inputMethodManager.shortcutInputMethodsAndSubtypes.entries.flatMap { (imi, subtypes) ->
-            subtypes.map { Shortcut(imi, it) }
-        }
+        // M2Y Board: no voice input / dictation — the system is never asked for a voice IME, so `shortcuts` stays
+        // empty: the voice key never shows and VOICE_INPUT does nothing
         if (DEBUG) {
             val new = shortcuts.joinToString("; ") { "${it.imi.id}: ${it.subtype.locale()}, ${it.subtype.mode}" }
             Log.d(TAG, ("Update shortcut IMEs to: $new"))

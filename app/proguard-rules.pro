@@ -12,3 +12,10 @@
 # after upgrading to gradle 8, stack traces contain "unknown source"
 -keepattributes SourceFile,LineNumberTable
 -dontobfuscate
+
+# M2Y Board: release drops debug/verbose/info logging; warnings and errors still reach logcat
+-assumenosideeffects class helium314.keyboard.latin.utils.Log {
+    public static void d(...);
+    public static void v(...);
+    public static void i(...);
+}

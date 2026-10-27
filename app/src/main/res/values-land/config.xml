@@ -49,18 +49,12 @@
     <integer name="config_max_more_suggestions_row">2</integer>
     <fraction name="config_min_more_suggestions_width">60%</fraction>
 
-    <!-- Gesture floating preview text parameters -->
-    <dimen name="config_gesture_floating_preview_text_size">23dp</dimen>
-    <dimen name="config_gesture_floating_preview_text_offset">54dp</dimen>
-    <dimen name="config_gesture_floating_preview_horizontal_padding">23dp</dimen>
-    <dimen name="config_gesture_floating_preview_vertical_padding">15dp</dimen>
 
     <!-- Emoji keyboard -->
     <fraction name="config_emoji_keyboard_key_width">8.33%p</fraction>
     <fraction name="config_emoji_keyboard_row_height">41%p</fraction>
     <fraction name="config_emoji_keyboard_key_letter_size">78%p</fraction>
     <fraction name="config_emoji_keyboard_key_label_size">78%p</fraction>
-    <integer name="config_emoji_keyboard_max_recents_key_count">32</integer>
 
     <!-- Clipboard keyboard -->
     <integer name="config_clipboard_keyboard_col_count">3</integer>

@@ -22,8 +22,6 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.floris.PopupSet;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.StringUtils;
 import helium314.keyboard.latin.utils.PopupKeysUtilsKt;
-import helium314.keyboard.latin.utils.ToolbarKey;
-import helium314.keyboard.latin.utils.ToolbarUtilsKt;
 import kotlin.Pair;
 import kotlin.collections.ArraysKt;
 
@@ -955,7 +953,7 @@ public class Key implements Comparable<Key> {
     }
 
     @Nullable private static String getDisabledIconName(@NonNull final String iconName) {
-        if (iconName.equals(ToolbarUtilsKt.getToolbarKeyStrings().get(ToolbarKey.VOICE)))
+        if (iconName.equals(KeyboardIconsSet.NAME_VOICE_KEY))
             return KeyboardIconsSet.NAME_SHORTCUT_KEY_DISABLED;
         return null;
     }

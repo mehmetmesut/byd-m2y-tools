@@ -14,7 +14,6 @@ import androidx.core.view.inputmethod.InputContentInfoCompat;
 import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.keyboard.internal.LayoutDirective;
 import helium314.keyboard.latin.common.Constants;
-import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.utils.RecapitalizeMode;
 
 public interface KeyboardActionListener {
@@ -76,26 +75,6 @@ public interface KeyboardActionListener {
     void onContent(InputContentInfoCompat content);
 
     /**
-     * Called when user started batch input.
-     */
-    void onStartBatchInput();
-
-    /**
-     * Sends the ongoing batch input points data.
-     * @param batchPointers the batch input points representing the user input
-     */
-    void onUpdateBatchInput(InputPointers batchPointers);
-
-    /**
-     * Sends the final batch input points data.
-     *
-     * @param batchPointers the batch input points representing the user input
-     */
-    void onEndBatchInput(InputPointers batchPointers);
-
-    void onCancelBatchInput();
-
-    /**
      * Called when user released a finger outside any key.
      */
     void onCancelInput();
@@ -147,14 +126,6 @@ public interface KeyboardActionListener {
         public void onTextInput(String text) {}
         @Override
         public void onContent(InputContentInfoCompat content) {}
-        @Override
-        public void onStartBatchInput() {}
-        @Override
-        public void onUpdateBatchInput(InputPointers batchPointers) {}
-        @Override
-        public void onEndBatchInput(InputPointers batchPointers) {}
-        @Override
-        public void onCancelBatchInput() {}
         @Override
         public void onCancelInput() {}
         @Override

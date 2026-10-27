@@ -7,7 +7,6 @@ package helium314.keyboard.keyboard.internal
 
 import android.text.TextUtils
 import helium314.keyboard.event.Event
-import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.PointerTracker
 import helium314.keyboard.keyboard.internal.LayoutDirective.Alphabet
 import helium314.keyboard.keyboard.internal.LayoutDirective.Utility
@@ -43,10 +42,6 @@ class KeyboardState(private val switchActions: SwitchActions) {
         fun startDoubleTapShiftKeyTimer()
         fun popDoubleTapShiftKeyTimer(): Boolean
         fun cancelDoubleTapShiftKeyTimer()
-
-        fun setOneHandedModeEnabled(enabled: Boolean)
-        fun switchOneHandedMode()
-        fun setFloatingKeyboardEnabled(enabled: Boolean)
 
         companion object {
             const val DEBUG_ACTION = false
@@ -85,7 +80,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         }
     }
 
-    fun onLoadKeyboard(autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?, onHandedModeEnabled: Boolean) {
+    fun onLoadKeyboard(autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?) {
         if (DEBUG_EVENT) {
             Log.d(TAG, "onLoadKeyboard: " + stateToString(autoCapsFlags, recapitalizeMode))
         }
@@ -106,8 +101,6 @@ class KeyboardState(private val switchActions: SwitchActions) {
             loadLayout(Alphabet(ShiftMode.UNSHIFT, autoCapsFlags, recapitalizeMode))
             onUpdateShiftState(autoCapsFlags, recapitalizeMode)
         }
-        switchActions.setOneHandedModeEnabled(onHandedModeEnabled)
-        switchActions.setFloatingKeyboardEnabled(Settings.getValues().mIsFloatingKeyboard)
     }
 
     fun onSaveKeyboardState() {
@@ -477,12 +470,6 @@ class KeyboardState(private val switchActions: SwitchActions) {
             KeyCode.NUMPAD -> toggleLayout(Utility.NUMPAD, autoCapsFlags, recapitalizeMode)
             KeyCode.DPAD -> toggleLayout(Utility.DPAD, autoCapsFlags, recapitalizeMode)
             KeyCode.SYMBOL -> toggleLayout(Utility.SYMBOLS, autoCapsFlags, recapitalizeMode)
-            KeyCode.TOGGLE_ONE_HANDED_MODE -> switchActions.setOneHandedModeEnabled(!Settings.getValues().mOneHandedModeEnabled)
-            KeyCode.SWITCH_ONE_HANDED_MODE -> switchActions.switchOneHandedMode()
-            KeyCode.TOGGLE_FLOATING_WINDOW -> {
-                switchActions.setFloatingKeyboardEnabled(!Settings.getValues().mIsFloatingKeyboard)
-                KeyboardSwitcher.getInstance().reloadKeyboard()
-            }
         }
     }
 

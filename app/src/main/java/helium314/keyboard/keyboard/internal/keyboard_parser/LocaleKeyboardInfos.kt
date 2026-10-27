@@ -61,8 +61,9 @@ class LocaleKeyboardInfos(dataStream: InputStream?, locale: Locale) {
             popupKeys["!"] = mutableListOf("¡")
         if (labelQuestion !in popupKeys)
             popupKeys[labelQuestion] = if (labelQuestion == "?") mutableListOf("¿") else mutableListOf("?", "¿")
+        // M2Y Board: "*" instead of "@" (the bottom row has its own @ key)
         if ("punctuation" !in popupKeys)
-            popupKeys["punctuation"] = mutableListOf("${Key.POPUP_KEYS_AUTO_COLUMN_ORDER}8", "\\,", "?", "!", "#", ")", "(", "/", ";", "'", "@", ":", "-", "\"", "+", "\\%", "&")
+            popupKeys["punctuation"] = mutableListOf("${Key.POPUP_KEYS_AUTO_COLUMN_ORDER}8", "\\,", "?", "!", "#", ")", "(", "/", ";", "'", "*", ":", "-", "\"", "+", "\\%", "&")
     }
 
     private fun readStream(stream: InputStream?, onlyPopupKeys: Boolean, priority: Boolean) {
@@ -97,7 +98,7 @@ class LocaleKeyboardInfos(dataStream: InputStream?, locale: Locale) {
         return when (element) {
             KeyboardElement.SYMBOLS -> listOf("\\".toTextKey(labelFlags = flags), "=".toTextKey(labelFlags = flags)) to emptyList()
             KeyboardElement.SYMBOLS_SHIFTED -> emptyList<KeyData>() to listOf("¡".toTextKey(labelFlags = flags), "¿".toTextKey(labelFlags = flags))
-            else -> emptyList<KeyData>() to listOf("!".toTextKey(labelFlags = flags), labelQuestion.toTextKey(labelFlags = flags)) // assume alphabet
+            else -> emptyList<KeyData>() to emptyList() // M2Y Board: iPhone layout ends the letter row with delete, no extra ! ?
         }
     }
 

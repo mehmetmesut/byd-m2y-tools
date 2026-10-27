@@ -148,17 +148,6 @@ public final class EmojiPalettesView extends LinearLayout
         }
 
         @Override
-        public void onViewDetachedFromWindow(PagerViewHolder holder) {
-            if (holder.mCategoryId == EmojiCategory.Category.RECENTS.ordinal()) {
-                // Needs to save pending updates for recent keys when we get out of the recents
-                // category because we don't want to move the recent emojis around while the user
-                // is in the recents category.
-                getRecentsKeyboard().flushPendingRecentKeys();
-                getRecyclerView(holder.itemView).getAdapter().notifyDataSetChanged();
-            }
-        }
-
-        @Override
         public long getItemId(int position) {
             return mEmojiCategory.getShownCategories().get(position).getCategory().ordinal();
         }
@@ -246,14 +235,6 @@ public final class EmojiPalettesView extends LinearLayout
         host.addView(iconView);
         iconView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
         iconView.setOnClickListener(this);
-        if (category == EmojiCategory.Category.RECENTS) {
-            iconView.setOnLongClickListener(v -> {
-                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this, HapticEvent.KEY_LONG_PRESS);
-                clearRecentKeys();
-
-                return true;
-            });
-        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -311,7 +292,6 @@ public final class EmojiPalettesView extends LinearLayout
      */
     @Override
     public void onReleaseKey(final Key key) {
-        addRecentKey(key);
         final int code = key.getCode();
         if (code == KeyCode.MULTIPLE_CODE_POINTS) {
             // todo: when we enter some emoticons, e.g. :-D, inline emoji search is triggered and emoji view is closed
@@ -323,20 +303,6 @@ public final class EmojiPalettesView extends LinearLayout
         mKeyboardActionListener.onReleaseKey(code, false);
         if (Settings.getValues().mAlphaAfterEmojiInEmojiView)
             mKeyboardActionListener.onCodeInput(KeyCode.ALPHA, NOT_A_COORDINATE, NOT_A_COORDINATE, false);
-    }
-
-    @Override
-    public void onRemoveRecentsKey(Key key)
-    {
-        getRecentsKeyboard().removeRecentsKey(key);
-    }
-
-    private void clearRecentKeys() {
-        if (RecentEmojis.get().isEmpty()) return;
-        RecentEmojis.clear();
-        getRecentsKeyboard().removeAllKeys();
-        mPager.getAdapter().notifyItemChanged(mEmojiCategory.getRecentTabId());
-        KeyboardSwitcher.getInstance().showToast(getResources().getString(R.string.recent_emojis_cleared), true);
     }
 
     @Override
@@ -367,22 +333,8 @@ public final class EmojiPalettesView extends LinearLayout
         final KeyDrawParams params = new KeyDrawParams();
         params.updateParams(mEmojiLayoutParams.getBottomRowKeyboardHeight(), keyVisualAttr);
         new EmojiLayoutParams(getResources()).setEmojiListProperties(mPager); // necessary when floating
-        mEmojiCategory.reloadRecents(); // in case recents changed from outside emoji keyboards
         setupSidePadding();
         initDictionaryFacilitator();
-    }
-
-    private void addRecentKey(Key key) {
-        if (Settings.getValues().mIncognitoModeEnabled) {
-            // We do not want to log recent keys while being in incognito
-            return;
-        }
-        if (mEmojiCategory.isInRecentTab()) {
-            getRecentsKeyboard().addPendingKey(key);
-            return;
-        }
-        getRecentsKeyboard().addKeyFirst(key);
-        mPager.getAdapter().notifyItemChanged(mEmojiCategory.getRecentTabId());
     }
 
     private void setupBottomRowKeyboard(EditorInfo editorInfo, KeyboardActionListener keyboardActionListener) {
@@ -417,15 +369,6 @@ public final class EmojiPalettesView extends LinearLayout
                 mEmojiCategoryPageIndicatorView.getPaddingBottom()
         );
         // setting width does not do anything, so we have some workaround in EmojiCategoryPageIndicatorView
-    }
-
-    public void stopEmojiPalettes() {
-        if (!initialized) return;
-        getRecentsKeyboard().flushPendingRecentKeys();
-    }
-
-    private DynamicGridKeyboard getRecentsKeyboard() {
-        return mEmojiCategory.getKeyboard(EmojiCategory.Category.RECENTS, 0);
     }
 
     public void setKeyboardActionListener(final KeyboardActionListener listener) {

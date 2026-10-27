@@ -20,6 +20,8 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Debug;
+import android.os.Looper;
+import android.os.MessageQueue;
 import android.os.Message;
 import android.os.Process;
 import android.util.PrintWriterPrinter;
@@ -60,19 +62,15 @@ import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.CoordinateUtils;
-import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.common.ViewOutlineProviderUtilsKt;
 import helium314.keyboard.latin.define.DebugFlags;
 import helium314.keyboard.latin.inputlogic.InputLogic;
-import helium314.keyboard.latin.personalization.PersonalizationHelper;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsSubtype;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
-import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
 import helium314.keyboard.latin.utils.ColorUtilKt;
-import helium314.keyboard.latin.utils.FloatingKeyboardUtils;
 import helium314.keyboard.latin.utils.FoldableUtils;
 import helium314.keyboard.latin.utils.InlineAutofillUtils;
 import helium314.keyboard.latin.utils.InputMethodPickerKt;
@@ -92,6 +90,10 @@ import kotlin.Unit;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.io.File;
+import helium314.keyboard.latin.common.FileUtils;
+import helium314.keyboard.latin.utils.ExecutorUtils;
+import helium314.keyboard.latin.utils.PersonalWord;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -130,7 +132,7 @@ public class LatinIME extends InputMethodService implements
 
     // UIHandler is needed when creating InputLogic
     public final UIHandler mHandler = new UIHandler(this);
-    private DictionaryFacilitator mDictionaryFacilitator = // non-final for active gesture data gathering, revert when data gathering phase is done (end of 2026 latest)
+    private final DictionaryFacilitator mDictionaryFacilitator =
             DictionaryFacilitatorProvider.getDictionaryFacilitator(false);
     final InputLogic mInputLogic = new InputLogic(this, this, mDictionaryFacilitator);
 
@@ -189,18 +191,15 @@ public class LatinIME extends InputMethodService implements
 
     private final boolean mIsHardwareAcceleratedDrawingEnabled;
 
-    private GestureConsumer mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
-
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
 
     public static final class UIHandler extends LeakGuardHandlerWrapper<LatinIME> {
         private static final int MSG_UPDATE_SHIFT_STATE = 0;
         private static final int MSG_PENDING_IMS_CALLBACK = 1;
         private static final int MSG_UPDATE_SUGGESTION_STRIP = 2;
-        private static final int MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS = 3;
+        private static final int MSG_SET_SUGGESTIONS = 3;
         private static final int MSG_RESUME_SUGGESTIONS = 4;
         private static final int MSG_REOPEN_DICTIONARIES = 5;
-        private static final int MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED = 6;
         private static final int MSG_RESET_CACHES = 7;
         private static final int MSG_WAIT_FOR_DICTIONARY_LOAD = 8;
         private static final int MSG_DEALLOCATE_MEMORY = 9;
@@ -208,9 +207,7 @@ public class LatinIME extends InputMethodService implements
         // Update this when adding new messages
         private static final int MSG_LAST = MSG_SWITCH_LANGUAGE_AUTOMATICALLY;
 
-        private static final int ARG1_NOT_GESTURE_INPUT = 0;
-        private static final int ARG1_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT = 1;
-        private static final int ARG1_SHOW_GESTURE_FLOATING_PREVIEW_TEXT = 2;
+        private static final int ARG1_UNUSED = 0;
         private static final int ARG2_UNUSED = 0;
         private static final int ARG1_TRUE = 1;
 
@@ -249,14 +246,8 @@ public class LatinIME extends InputMethodService implements
                     latinIme.mKeyboardSwitcher.updateShiftState(latinIme.getCurrentAutoCapsState(),
                             latinIme.getCurrentRecapitalizeState());
                     break;
-                case MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS:
-                    if (msg.arg1 == ARG1_NOT_GESTURE_INPUT) {
-                        final SuggestedWords suggestedWords = (SuggestedWords) msg.obj;
-                        latinIme.setSuggestedWords(suggestedWords);
-                    } else {
-                        latinIme.showGesturePreviewAndSetSuggestions((SuggestedWords) msg.obj,
-                                msg.arg1 == ARG1_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT);
-                    }
+                case MSG_SET_SUGGESTIONS:
+                    latinIme.setSuggestedWords((SuggestedWords) msg.obj);
                     break;
                 case MSG_RESUME_SUGGESTIONS:
                     latinIme.mInputLogic.restartSuggestionsOnWordTouchedByCursor(
@@ -268,13 +259,6 @@ public class LatinIME extends InputMethodService implements
                     // changed.
                     postWaitForDictionaryLoad();
                     latinIme.resetDictionaryFacilitatorIfNecessary();
-                    break;
-                case MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED:
-                    final SuggestedWords suggestedWords = (SuggestedWords) msg.obj;
-                    latinIme.mInputLogic.onUpdateTailBatchInputCompleted(
-                            latinIme.mSettings.getCurrent(),
-                            suggestedWords, latinIme.mKeyboardSwitcher);
-                    latinIme.onTailBatchInputResultShown(suggestedWords);
                     break;
                 case MSG_RESET_CACHES:
                     final SettingsValues settingsValues = latinIme.mSettings.getCurrent();
@@ -389,24 +373,9 @@ public class LatinIME extends InputMethodService implements
             }
         }
 
-        public void showGesturePreviewAndSetSuggestions(final SuggestedWords suggestedWords,
-                                                        final boolean dismissGestureFloatingPreviewText) {
-            removeMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS);
-            final int arg1 = dismissGestureFloatingPreviewText
-                    ? ARG1_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT
-                    : ARG1_SHOW_GESTURE_FLOATING_PREVIEW_TEXT;
-            obtainMessage(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS, arg1,
-                    ARG2_UNUSED, suggestedWords).sendToTarget();
-        }
-
         public void setSuggestions(final SuggestedWords suggestedWords) {
-            removeMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS);
-            obtainMessage(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS,
-                    ARG1_NOT_GESTURE_INPUT, ARG2_UNUSED, suggestedWords).sendToTarget();
-        }
-
-        public void showTailBatchInputResult(final SuggestedWords suggestedWords) {
-            obtainMessage(MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED, suggestedWords).sendToTarget();
+            removeMessages(MSG_SET_SUGGESTIONS);
+            obtainMessage(MSG_SET_SUGGESTIONS, ARG1_UNUSED, ARG2_UNUSED, suggestedWords).sendToTarget();
         }
 
         public void postSwitchLanguage(final InputMethodSubtype subtype) {
@@ -590,7 +559,16 @@ public class LatinIME extends InputMethodService implements
         ContextCompat.registerReceiver(this, mEmojiSearchReceiver, emojiSearchFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         StatsUtils.onCreate(mSettings.getCurrent(), mRichImm);
+        // M2Y Board: the system starts the keyboard service with the car, long before the first tap; build the view
+        // when the main thread is first idle so that tap does not wait for inflation (InputMethodService only calls
+        // onCreateInputView while it has no view)
+        Looper.myQueue().addIdleHandler(mPrebuildInputView);
     }
+
+    private final MessageQueue.IdleHandler mPrebuildInputView = () -> {
+        if (mInputView == null) setInputView(onCreateInputView());
+        return false;
+    };
 
     private void loadSettings() {
         final Locale locale = mRichImm.getCurrentSubtypeLocale();
@@ -606,28 +584,27 @@ public class LatinIME extends InputMethodService implements
         if (!mHandler.hasPendingReopenDictionaries()) {
             resetDictionaryFacilitatorIfNecessary();
         }
-        refreshPersonalizationDictionarySession(currentSettingsValues);
+        removeOldHistoryFiles();
         mInputLogic.mSuggest.clearNextWordSuggestionsCache();
         mInputLogic.updateEmojiDictionary(locale);
         mStatsUtilsManager.onLoadSettings(this, currentSettingsValues);
     }
 
-    private void refreshPersonalizationDictionarySession(
-            final SettingsValues currentSettingsValues) {
-        if (!currentSettingsValues.mUsePersonalizedDicts) {
-            // Remove user history dictionaries.
-            PersonalizationHelper.removeAllUserHistoryDictionaries(this);
-            mDictionaryFacilitator.clearUserHistoryDictionary(this);
-        }
+    private static boolean sOldHistoryFilesRemoved; // once per process is enough
+
+    /** M2Y Board: nothing is learned; deletes the history dictionaries older versions left behind. */
+    private void removeOldHistoryFiles() {
+        if (sOldHistoryFilesRemoved) return;
+        sOldHistoryFilesRemoved = true;
+        final File filesDir = getFilesDir();
+        if (filesDir == null) return;
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute(() ->
+                FileUtils.deleteFilteredFiles(filesDir, (dir, name) -> name.startsWith("UserHistoryDictionary")));
     }
 
     // Note that this method is called from a non-UI thread.
     @Override
     public void onUpdateMainDictionaryAvailability(final boolean isMainDictionaryAvailable) {
-        final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
-        if (mainKeyboardView != null) {
-            mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable);
-        }
         if (mHandler.hasPendingWaitForDictionaryLoad()) {
             mHandler.cancelWaitForDictionaryLoad();
             mHandler.postResumeSuggestions(false /* shouldDelay */);
@@ -650,12 +627,7 @@ public class LatinIME extends InputMethodService implements
         final ArrayList<Locale> locales = new ArrayList<>();
         locales.add(subtypeLocale);
         locales.addAll(mSettings.getCurrent().mSecondaryLocales);
-        if (mDictionaryFacilitator.usesSameSettings(
-                locales,
-                mSettings.getCurrent().mUseContactsDictionary,
-                mSettings.getCurrent().mUseAppsDictionary,
-                mSettings.getCurrent().mUsePersonalizedDicts
-        )) {
+        if (mDictionaryFacilitator.usesSameSettings(locales)) {
             return;
         }
         resetDictionaryFacilitator(subtypeLocale);
@@ -671,9 +643,7 @@ public class LatinIME extends InputMethodService implements
     private void resetDictionaryFacilitator(@NonNull final Locale locale) {
         final SettingsValues settingsValues = mSettings.getCurrent();
         try {
-            mDictionaryFacilitator.resetDictionaries(this, locale,
-                settingsValues.mUseContactsDictionary, settingsValues.mUseAppsDictionary,
-                settingsValues.mUsePersonalizedDicts, false, "", this);
+            mDictionaryFacilitator.resetDictionaries(this, locale, false, "", this);
         } catch (Throwable e) {
             // this should not happen, but in case it does we at least want to show a keyboard
             Log.e(TAG, "Could not reset dictionary facilitator, please fix ASAP", e);
@@ -686,9 +656,7 @@ public class LatinIME extends InputMethodService implements
      */
     /* package private */ void resetSuggestMainDict() {
         final SettingsValues settingsValues = mSettings.getCurrent();
-        mDictionaryFacilitator.resetDictionaries(this, mDictionaryFacilitator.getMainLocale(),
-                settingsValues.mUseContactsDictionary, settingsValues.mUseAppsDictionary,
-                settingsValues.mUsePersonalizedDicts, true, "", this);
+        mDictionaryFacilitator.resetDictionaries(this, mDictionaryFacilitator.getMainLocale(), true, "", this);
         mKeyboardSwitcher.setThemeNeedsReload(); // necessary for emoji search
         EmojiPalettesView.closeDictionaryFacilitator();
         EmojiSearchActivity.Companion.closeDictionaryFacilitator();
@@ -701,6 +669,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
+        Looper.myQueue().removeIdleHandler(mPrebuildInputView);
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();
@@ -803,7 +772,6 @@ public class LatinIME extends InputMethodService implements
         StatsUtils.onFinishInputView();
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
-        mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
     }
 
     @Override
@@ -865,9 +833,6 @@ public class LatinIME extends InputMethodService implements
         super.onStartInputView(editorInfo, restarting);
 
         mDictionaryFacilitator.onStartInput();
-        // Switch to the null consumer to handle cases leading to early exit below, for which we
-        // also wouldn't be consuming gesture data.
-        mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
         mRichImm.refreshSubtypeCaches();
         final KeyboardSwitcher switcher = mKeyboardSwitcher;
 
@@ -880,8 +845,6 @@ public class LatinIME extends InputMethodService implements
         // we want to reload the settings before calling updateKeyboardTheme, because updateKeyboardTheme reads SettingsValues.mToolbarMode
         if (isDifferentTextField || !currentSettingsValues.hasSameOrientation(getResources().getConfiguration())) {
             loadSettings();
-            if (hasSuggestionStripView())
-                mSuggestionStripView.updateVoiceKey();
         }
 
         switcher.updateKeyboardTheme(mDisplayContext);
@@ -904,12 +867,6 @@ public class LatinIME extends InputMethodService implements
         if (mainKeyboardView == null) {
             return;
         }
-
-        // Update to a gesture consumer with the current editor and IME state.
-        mGestureConsumer = GestureConsumer.newInstance(editorInfo,
-                mInputLogic.getPrivateCommandPerformer(),
-                mRichImm.getCurrentSubtypeLocale(),
-                switcher.getKeyboard());
 
         // Forward this event to the accessibility utilities, if enabled.
         final AccessibilityUtils accessUtils = AccessibilityUtils.Companion.getInstance();
@@ -989,22 +946,14 @@ public class LatinIME extends InputMethodService implements
             // Space state must be updated before calling updateShiftState
             switcher.updateShiftState(getCurrentAutoCapsState(), getCurrentRecapitalizeState());
         }
-        // Set neutral suggestions and show the toolbar if the "Auto show toolbar" setting is enabled.
+        // Set neutral suggestions
         if (!mHandler.hasPendingResumeSuggestions()) {
             mHandler.cancelUpdateSuggestionStrip();
             setNeutralSuggestionStrip();
-            if (hasSuggestionStripView() && currentSettingsValues.mAutoShowToolbar && !tryShowClipboardSuggestion()) {
-                mSuggestionStripView.setToolbarVisibility(true);
-            }
         }
 
-        mainKeyboardView.setMainDictionaryAvailability(mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary());
         mainKeyboardView.setKeyPreviewPopupEnabled(currentSettingsValues.mKeyPreviewPopupOn);
         mainKeyboardView.setSlidingKeyInputPreviewEnabled(currentSettingsValues.mSlidingKeyInputPreviewEnabled);
-        mainKeyboardView.setGestureHandlingEnabledByUser(
-                currentSettingsValues.mGestureInputEnabled,
-                currentSettingsValues.mGestureTrailEnabled,
-                currentSettingsValues.mGestureFloatingPreviewTextEnabled);
 
         if (TRACE) Debug.startMethodTracing("/data/trace/latinime");
     }
@@ -1013,8 +962,6 @@ public class LatinIME extends InputMethodService implements
     public void onWindowShown() {
         super.onWindowShown();
         if (isInputViewShown()) {
-            if (mInputView != null && Settings.getValues().mIsFloatingKeyboard)
-                FloatingKeyboardUtils.setFloating(mInputView);
             setNavigationBarColor();
             workaroundForHuaweiStatusBarIssue();
         }
@@ -1209,8 +1156,6 @@ public class LatinIME extends InputMethodService implements
         }
         final int stripHeight = mKeyboardSwitcher.isShowingStripContainer() ? mKeyboardSwitcher.getStripContainer().getHeight() : 0;
         int visibleTopY = inputHeight - visibleKeyboardView.getHeight() - stripHeight;
-        if (Settings.getValues().mIsFloatingKeyboard)
-            visibleTopY = getResources().getDisplayMetrics().heightPixels;
 
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setMoreSuggestionsHeight(visibleTopY);
@@ -1218,18 +1163,13 @@ public class LatinIME extends InputMethodService implements
 
         // Need to set expanded touchable region only if a keyboard view is being shown.
         if (visibleKeyboardView.isShown()) {
-            int touchLeft = 0;
-            int touchTop = mKeyboardSwitcher.isShowingPopupKeysPanel() ? 0 : visibleTopY;
-            int touchRight = visibleKeyboardView.getWidth();
-            int touchBottom = inputHeight + EXTENDED_TOUCHABLE_REGION_HEIGHT; // Extend touchable region below the keyboard.
-            if (mSettings.getCurrent().mIsFloatingKeyboard) {
-                var xy = FloatingKeyboardUtils.readPosition(this, Integer.MAX_VALUE, Integer.MAX_VALUE);
-                touchLeft = xy.component1();
-                touchTop = xy.component2();
-                touchRight = touchLeft + mSettings.getCurrent().mFloatingWidth;
-                touchBottom = touchTop + inputHeight;
-            }
+            final boolean popupShown = mKeyboardSwitcher.isShowingPopupKeysPanel();
+            final int touchTop = popupShown ? 0 : visibleTopY;
+            final int touchBottom = inputHeight + EXTENDED_TOUCHABLE_REGION_HEIGHT; // Extend touchable region below the keyboard.
             outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_REGION;
+            // M2Y Board: touches on the transparent side margins go to the app below (a popup may overlap them)
+            final int touchLeft = popupShown ? 0 : visibleKeyboardView.getLeft();
+            final int touchRight = popupShown ? mInputView.getWidth() : visibleKeyboardView.getRight();
             outInsets.touchableRegion.set(touchLeft, touchTop, touchRight, touchBottom);
         }
 
@@ -1274,8 +1214,8 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public boolean onEvaluateFullscreenMode() {
-        if (isImeSuppressedByHardwareKeyboard() || mSettings.getCurrent().mIsFloatingKeyboard) {
-            // If there is a hardware keyboard or we're floating, disable full screen mode.
+        if (isImeSuppressedByHardwareKeyboard()) {
+            // If there is a hardware keyboard, disable full screen mode.
             return false;
         }
         // Reread resource value here, because this method is called by the framework as needed.
@@ -1442,47 +1382,6 @@ public class LatinIME extends InputMethodService implements
         mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
     }
 
-    public void onStartBatchInput() {
-        mInputLogic.onStartBatchInput(mSettings.getCurrent(), mKeyboardSwitcher, mHandler);
-        mGestureConsumer.onGestureStarted(mRichImm.getCurrentSubtypeLocale(), mKeyboardSwitcher.getKeyboard());
-    }
-
-    public void onUpdateBatchInput(final InputPointers batchPointers) {
-        mInputLogic.onUpdateBatchInput(batchPointers);
-    }
-
-    public void onEndBatchInput(final InputPointers batchPointers) {
-        mInputLogic.onEndBatchInput(batchPointers);
-        mGestureConsumer.onGestureCompleted(batchPointers);
-    }
-
-    public void onCancelBatchInput() {
-        mInputLogic.onCancelBatchInput(mHandler);
-        mGestureConsumer.onGestureCanceled();
-    }
-
-    /**
-     * To be called after the InputLogic has gotten a chance to act on the suggested words by the
-     * IME for the full gesture, possibly updating the TextView to reflect the first suggestion.
-     * <p>
-     * This method must be run on the UI Thread.
-     * @param suggestedWords suggested words by the IME for the full gesture.
-     */
-    public void onTailBatchInputResultShown(final SuggestedWords suggestedWords) {
-        mGestureConsumer.onImeSuggestionsProcessed(suggestedWords,
-                mInputLogic.getComposingStart(), mInputLogic.getComposingLength(),
-                mDictionaryFacilitator);
-    }
-
-    // This method must run on the UI Thread.
-    private void showGesturePreviewAndSetSuggestions(@NonNull final SuggestedWords suggestedWords,
-                                              final boolean dismissGestureFloatingPreviewText) {
-        setSuggestions(suggestedWords);
-        final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
-        mainKeyboardView.showGestureFloatingPreviewText(suggestedWords,
-                dismissGestureFloatingPreviewText /* dismissDelayed */);
-    }
-
     public boolean hasSuggestionStripView() {
         return null != mSuggestionStripView;
     }
@@ -1511,21 +1410,13 @@ public class LatinIME extends InputMethodService implements
                 || noSuggestionsFromDictionaries) {
             mSuggestionStripView.setSuggestions(suggestedWords,
                     mRichImm.getCurrentSubtype().isRtlSubtype());
-            // Auto hide the toolbar if dictionary suggestions are available
-            if (currentSettingsValues.mAutoHideToolbar && !noSuggestionsFromDictionaries) {
-                mSuggestionStripView.setToolbarVisibility(false);
-            }
         }
     }
 
     @Override
     public void setSuggestions(final SuggestedWords suggestedWords) {
         if (suggestedWords.isEmpty()) {
-            // avoids showing clipboard suggestion when starting gesture typing
-            // should be fine, as there will be another suggestion in a few ms
-            // (but not a great style to avoid this visual glitch, maybe revert this commit and replace with sth better)
-            if (suggestedWords.mInputStyle != SuggestedWords.INPUT_STYLE_UPDATE_BATCH)
-                setNeutralSuggestionStrip();
+            setNeutralSuggestionStrip();
         } else {
             setSuggestedWords(suggestedWords);
         }
@@ -1539,6 +1430,25 @@ public class LatinIME extends InputMethodService implements
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setToolbarVisibility(false);
         }
+    }
+
+    // M2Y Board: add-word toolbar key; word is null when nothing is selected or typed before the cursor
+    public void addWordToPersonalDictionary(@Nullable final String word) {
+        if (word == null) {
+            KeyboardSwitcher.getInstance().showToast(getString(R.string.personal_word_missing), true);
+            return;
+        }
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute(() -> {
+            String message;
+            try {
+                message = getString(PersonalWord.add(this, word) ? R.string.personal_word_added : R.string.personal_word_exists, word);
+            } catch (RuntimeException e) { // e.g. user dictionary provider missing or locked; the executor would swallow it
+                Log.w(TAG, "could not add word to the personal dictionary", e);
+                message = getString(R.string.personal_word_failed);
+            }
+            final String toast = message;
+            mHandler.post(() -> KeyboardSwitcher.getInstance().showToast(toast, true));
+        });
     }
 
     // Called from {@link SuggestionStripView} through the {@link SuggestionStripView#Listener}
@@ -1577,27 +1487,12 @@ public class LatinIME extends InputMethodService implements
         final SettingsValues currentSettings = mSettings.getCurrent();
         if (tryShowClipboardSuggestion()) {
             // clipboard suggestion has been set
-            if (hasSuggestionStripView() && currentSettings.mAutoHideToolbar)
-                mSuggestionStripView.setToolbarVisibility(false);
             return;
         }
         final SuggestedWords neutralSuggestions = currentSettings.mSuggestPunctuation
                 ? currentSettings.mPunctuationSuggestions
                 : SuggestedWords.getEmptyInstance();
         setSuggestedWords(neutralSuggestions);
-        if (hasSuggestionStripView() && currentSettings.mAutoShowToolbar) {
-            final int codePointBeforeCursor = mInputLogic.mConnection.getCodePointBeforeCursor();
-            if (mInputLogic.mConnection.hasSelection()
-                    || codePointBeforeCursor == Constants.NOT_A_CODE
-                    || codePointBeforeCursor == Constants.CODE_ENTER) {
-                mSuggestionStripView.setToolbarVisibility(true);
-            }
-        }
-    }
-
-    @Override
-    public void removeSuggestion(final String word) {
-        mDictionaryFacilitator.removeWord(word);
     }
 
     @Override
@@ -1639,8 +1534,6 @@ public class LatinIME extends InputMethodService implements
             if (inputTransaction.getEvent().isSuggestionStripPress()) {
                 // Suggestion strip press: no input.
                 inputStyle = SuggestedWords.INPUT_STYLE_NONE;
-            } else if (inputTransaction.getEvent().isGesture()) {
-                inputStyle = SuggestedWords.INPUT_STYLE_TAIL_BATCH;
             } else {
                 inputStyle = SuggestedWords.INPUT_STYLE_TYPING;
             }
@@ -1680,7 +1573,6 @@ public class LatinIME extends InputMethodService implements
                 AudioAndHapticFeedbackManager.getInstance();
 
         feedbackManager.performHapticFeedback(keyboardView, hapticEvent);
-        feedbackManager.performAudioFeedback(code, hapticEvent);
     }
 
     // Hooks for hardware keyboard

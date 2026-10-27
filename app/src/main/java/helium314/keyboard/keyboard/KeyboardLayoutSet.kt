@@ -87,9 +87,7 @@ class KeyboardLayoutSet internal constructor(private val mContext: Context, priv
         }
         val keyboard = builder.build()
         keyboardCache[id] = SoftReference<Keyboard>(keyboard)
-        if (!mParams.isSpellChecker
-            && (id.element == KeyboardElement.ALPHABET || id.element == KeyboardElement.ALPHABET_AUTOMATIC_SHIFTED)
-        ) {
+        if (id.element == KeyboardElement.ALPHABET || id.element == KeyboardElement.ALPHABET_AUTOMATIC_SHIFTED) {
             // We only forcibly cache the primary, "ALPHABET", layouts.
             for (i in forcibleKeyboardCache.size - 1 downTo 1) {
                 forcibleKeyboardCache[i] = forcibleKeyboardCache[i - 1]
@@ -115,15 +113,11 @@ class KeyboardLayoutSet internal constructor(private val mContext: Context, priv
         var settingsValues: SettingsValues? = null
         // When the device is still locked, features like showing the IME setting app need to be locked down.
         var deviceLocked = Settings.getValues().mIsLocked
-        var isSpellChecker = false
         var keyboardWidth = 0
         var keyboardHeight = 0
         var script = ScriptUtils.SCRIPT_LATIN
         var internalAction: InternalAction? = null
         var emojiSearchAvailable = false
-
-        // Indicates if the user has enabled the split-layout preference and the required ProductionFlags are enabled.
-        var isSplitLayoutEnabled = false
     }
 
     class Builder(private val mContext: Context, ei: EditorInfo?, settingsValues: SettingsValues?) {
@@ -148,11 +142,6 @@ class KeyboardLayoutSet internal constructor(private val mContext: Context, priv
             val forceAscii = (params.editorInfo.imeOptions and EditorInfo.IME_FLAG_FORCE_ASCII) != 0
             params.subtype = if (forceAscii && !asciiCapable) noLanguageSubtype
                 else subtype
-            return this
-        }
-
-        fun setIsSpellChecker(isSpellChecker: Boolean): Builder {
-            params.isSpellChecker = isSpellChecker
             return this
         }
 

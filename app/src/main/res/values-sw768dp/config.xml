@@ -53,17 +53,10 @@
     <dimen name="config_suggestion_text_size">18dp</dimen>
     <dimen name="config_more_suggestions_hint_text_size">33dp</dimen>
 
-    <!-- Gesture floating preview text parameters -->
-    <dimen name="config_gesture_floating_preview_text_size">26dp</dimen>
-    <dimen name="config_gesture_floating_preview_text_offset">86dp</dimen>
-    <dimen name="config_gesture_floating_preview_horizontal_padding">26dp</dimen>
-    <dimen name="config_gesture_floating_preview_vertical_padding">17dp</dimen>
-    <dimen name="config_gesture_floating_preview_round_radius">3dp</dimen>
 
     <!-- Emoji keyboard -->
     <fraction name="config_emoji_keyboard_key_width">10%p</fraction>
     <fraction name="config_emoji_keyboard_row_height">30%p</fraction>
     <fraction name="config_emoji_keyboard_key_letter_size">64%p</fraction>
     <fraction name="config_emoji_keyboard_key_label_size">64%p</fraction>
-    <integer name="config_emoji_keyboard_max_recents_key_count">39</integer>
 </resources>

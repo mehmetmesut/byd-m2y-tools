@@ -184,7 +184,7 @@ object KeyLabel {
             EditorInfo.IME_ACTION_DONE             -> KeyboardIconsSet.NAME_DONE_KEY
             EditorInfo.IME_ACTION_PREVIOUS         -> KeyboardIconsSet.NAME_PREVIOUS_KEY
             InputTypeUtils.IME_ACTION_CUSTOM_LABEL -> params.mId.customActionLabel?.let { return it } ?: "!icon/enter_key"
-            else                                   -> return "!icon/enter_key"
+            else                                   -> return "↵ Enter" // M2Y Board: iPhone-style text label on the plain Enter key
         }
         val replacement = iconName.replaceIconWithLabelIfNoDrawable(params)
         return if (iconName == replacement) // i.e. icon exists

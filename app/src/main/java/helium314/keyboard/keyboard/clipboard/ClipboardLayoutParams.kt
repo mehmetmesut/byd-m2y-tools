@@ -28,8 +28,11 @@ class ClipboardLayoutParams(ctx: Context) {
             defaultKeyboardHeight, defaultKeyboardHeight) * sv.mKeyGapScale).toInt()
         keyHorizontalGap = (res.getFraction(R.fraction.config_key_horizontal_gap_holo,
             defaultKeyboardWidth, defaultKeyboardWidth) * sv.mKeyGapScale).toInt()
+        val edgeGap = KeyboardParams.edgeGapPx(res.getFraction(R.fraction.config_key_horizontal_gap_holo, 1, 1) * sv.mKeyGapScale,
+            defaultKeyboardWidth)
         val bottomPadding = (res.getFraction(R.fraction.config_keyboard_bottom_padding_holo,
-                defaultKeyboardHeight, defaultKeyboardHeight) * sv.mBottomPaddingScale).toInt()
+                defaultKeyboardHeight, defaultKeyboardHeight) * sv.mBottomPaddingScale).toInt() +
+            edgeGap // M2Y Board: same gap as the main keyboard
         val topPadding = res.getFraction(R.fraction.config_keyboard_top_padding_holo,
                 defaultKeyboardHeight, defaultKeyboardHeight).toInt()
 
@@ -37,7 +40,7 @@ class ClipboardLayoutParams(ctx: Context) {
         bottomRowKeyboardHeight = (defaultKeyboardHeight - bottomPadding - topPadding) / rowCount - keyVerticalGap / 2
         // height calculation is not good enough, probably also because keyboard top padding might be off by a pixel (see KeyboardParser)
         val offset = 1.25f * res.displayMetrics.density * sv.mKeyboardHeightScale
-        listHeight = defaultKeyboardHeight - bottomRowKeyboardHeight - bottomPadding + offset.toInt()
+        listHeight = defaultKeyboardHeight - bottomRowKeyboardHeight - bottomPadding + offset.toInt() + KeyboardParams.SECONDARY_BOTTOM_ROW_CORRECTION_PX
     }
 
     fun setListProperties(recycler: RecyclerView) {

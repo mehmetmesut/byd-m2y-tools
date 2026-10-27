@@ -195,8 +195,6 @@ data class VariationSelector(
  * The JSON class identifier for this selector is `keyboard_state_selector`.
  * Note that the conditions are checked in order as given below, and the first non-null AbstractKeyData is selected.
  *
- * @property emojiKeyEnabled The key data to use if [KeyboardId.emojiKeyEnabled] is true.
- * @property languageKeyEnabled The key data to use if [KeyboardId.languageSwitchKeyEnabled] is true.
  * @property symbols The key data to use if [KeyboardId.element] is [KeyboardElement.SYMBOLS].
  * @property moreSymbols The key data to use if [KeyboardId.element] is [KeyboardElement.SYMBOLS_SHIFTED].
  * @property dpad The key data to use if [KeyboardId.element] is [KeyboardElement.DPAD].
@@ -207,8 +205,6 @@ data class VariationSelector(
 @Serializable
 @SerialName("keyboard_state_selector")
 class KeyboardStateSelector(
-    val emojiKeyEnabled: AbstractKeyData? = null,
-    val languageKeyEnabled: AbstractKeyData? = null,
     val dpadKeyEnabled: AbstractKeyData? = null,
     val symbols: AbstractKeyData? = null,
     val moreSymbols: AbstractKeyData? = null,
@@ -218,10 +214,6 @@ class KeyboardStateSelector(
     val emojiSearchAvailable: AbstractKeyData? = null,
 ) : AbstractKeyData {
     override fun compute(params: KeyboardParams, isPopup: Boolean): KeyData? {
-        if (params.mId.emojiKeyEnabled)
-            emojiKeyEnabled?.compute(params)?.let { return it }
-        if (params.mId.languageSwitchKeyEnabled)
-            languageKeyEnabled?.compute(params)?.let { return it }
         if (params.mId.dpadKeyEnabled)
             dpadKeyEnabled?.compute(params)?.let { return it }
         if (params.mId.element == KeyboardElement.SYMBOLS)

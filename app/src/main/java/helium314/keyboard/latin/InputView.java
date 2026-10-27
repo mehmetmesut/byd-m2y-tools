@@ -9,6 +9,7 @@ package helium314.keyboard.latin;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,7 +23,6 @@ import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.suggestions.MoreSuggestionsView;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
-import helium314.keyboard.latin.utils.FloatingKeyboardUtils;
 import kotlin.Unit;
 
 
@@ -107,14 +107,21 @@ public final class InputView extends FrameLayout {
     }
 
     private Unit onNextLayout(View v) {
-        Settings.getValues().mColors.setBackground(findViewById(R.id.main_keyboard_frame), ColorType.MAIN_BACKGROUND);
+        final View frame = findViewById(R.id.main_keyboard_frame);
+        Settings.getValues().mColors.setBackground(frame, ColorType.MAIN_BACKGROUND);
+        // M2Y Board: the narrowed keyboard keeps the background, the side margins stay transparent (the app shows through)
+        final Drawable background = frame.getBackground();
+        if (frame.getPaddingLeft() > 0 && background != null && background.getConstantState() != null) {
+            frame.setBackground(null);
+            for (final int id : new int[] { R.id.strip_container, R.id.keyboard_view_wrapper }) {
+                final View part = findViewById(id);
+                part.setBackground(background.getConstantState().newDrawable().mutate());
+                Settings.getValues().mColors.setBackground(part, ColorType.MAIN_BACKGROUND);
+            }
+        }
 
         // Work around inset application being unreliable
         requestApplyInsets();
-
-        // need to update the floating keyboard position after applying insets
-        if (Settings.getValues().mIsFloatingKeyboard)
-            FloatingKeyboardUtils.setFloating(this);
         return null;
     }
 

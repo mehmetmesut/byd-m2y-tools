@@ -20,7 +20,6 @@ import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsSubtype
 import helium314.keyboard.latin.settings.SettingsSubtype.Companion.toSettingsSubtype
-import helium314.keyboard.latin.utils.ScriptUtils.script
 import java.util.Locale
 
 object SubtypeSettings {
@@ -37,22 +36,6 @@ object SubtypeSettings {
 
     fun getAllAvailableSubtypes(): List<InputMethodSubtype> =
         resourceSubtypesByLocale.values.flatten() + additionalSubtypes
-
-    fun getMatchingMainLayoutNameForLocale(locale: Locale): String {
-        val subtypes = resourceSubtypesByLocale.values.flatten()
-        val name = LocaleUtils.getBestMatch(locale, subtypes) { it.locale() }?.mainLayoutName()
-        if (name != null) return name
-        return when (locale.script()) {
-            ScriptUtils.SCRIPT_LATIN -> "qwerty"
-            ScriptUtils.SCRIPT_ARMENIAN -> "armenian_phonetic"
-            ScriptUtils.SCRIPT_CYRILLIC -> "ru"
-            ScriptUtils.SCRIPT_GREEK -> "greek"
-            ScriptUtils.SCRIPT_HEBREW -> "hebrew"
-            ScriptUtils.SCRIPT_GEORGIAN -> "georgian"
-            ScriptUtils.SCRIPT_BENGALI -> "bengali_unijoy"
-            else -> throw RuntimeException("Wrong script supplied: ${locale.script()}")
-        }
-    }
 
     fun addEnabledSubtype(prefs: SharedPreferences, newSubtype: InputMethodSubtype) {
         val subtype = newSubtype.toSettingsSubtype()

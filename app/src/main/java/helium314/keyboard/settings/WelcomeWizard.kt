@@ -47,7 +47,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import helium314.keyboard.latin.R
-import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
 import helium314.keyboard.latin.utils.previewDark
@@ -93,14 +92,13 @@ fun WelcomeWizard(
                 textAlign = TextAlign.Center,
                 color = titleColor,
             )
-            if (JniUtils.sHaveGestureLib)
-                Text(
-                    stringResource(R.string.setup_welcome_additional_description),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.End,
-                    color = titleColor,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Text(
+                stringResource(R.string.setup_welcome_additional_description),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.End,
+                color = titleColor,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
     @Composable

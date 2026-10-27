@@ -9,12 +9,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
 import android.util.AttributeSet
-import android.util.TypedValue
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.LayoutInflater
@@ -34,7 +30,6 @@ import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
-import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.SuggestedWords
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
@@ -42,31 +37,20 @@ import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Colors
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.define.DebugFlags
-import helium314.keyboard.latin.settings.DebugSettings
-import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.ToolbarMode
-import helium314.keyboard.latin.utils.addPinnedKey
 import helium314.keyboard.latin.utils.createToolbarKey
 import helium314.keyboard.latin.utils.dpToPx
 import helium314.keyboard.latin.utils.getEnabledToolbarKeys
 import helium314.keyboard.latin.utils.getPinnedToolbarKeys
 import helium314.keyboard.latin.utils.prefs
-import helium314.keyboard.latin.utils.removeFirst
-import helium314.keyboard.latin.utils.removePinnedKey
 import helium314.keyboard.latin.utils.setToolbarButtonsActivatedStateOnPrefChange
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.min
 import androidx.core.view.isGone
 import helium314.keyboard.latin.utils.onClickToolbarKey
 import helium314.keyboard.latin.utils.onLongClickToolbarKey
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @SuppressLint("InflateParams")
 class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int) :
@@ -78,7 +62,6 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     interface Listener {
         fun pickSuggestionManually(word: SuggestedWordInfo?)
         fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean)
-        fun removeSuggestion(word: String?)
         fun removeExternalSuggestions()
         fun onSwipeDownOnToolbar()
     }
@@ -104,13 +87,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             wordViews.add(word)
             val divider = inflater.inflate(R.layout.suggestion_divider, null)
             dividerViews.add(divider)
-            val info = TextView(context, null, R.attr.suggestionWordStyle)
-            info.setTextColor(colors.get(ColorType.KEY_TEXT))
-            info.setTextSize(TypedValue.COMPLEX_UNIT_DIP, DEBUG_INFO_TEXT_SIZE_IN_DIP)
-            debugInfoViews.add(info)
         }
-
-        DEBUG_SUGGESTIONS = context.prefs().getBoolean(DebugSettings.PREF_SHOW_SUGGESTION_INFOS, Defaults.PREF_SHOW_SUGGESTION_INFOS)
     }
 
     // toolbar views, drawables and setup
@@ -119,10 +96,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private val pinnedKeys: ViewGroup = findViewById(R.id.pinned_keys)
     private val suggestionsStrip: ViewGroup = findViewById(R.id.suggestions_strip)
     private val toolbarExpandKey = findViewById<ImageButton>(R.id.suggestions_strip_toolbar_key)
-    private val incognitoIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.INCOGNITO.name, context)
     private val toolbarArrowIcon = KeyboardIconsSet.instance.getNewDrawable(KeyboardIconsSet.NAME_TOOLBAR_KEY, context)
     private val defaultToolbarBackground: Drawable = toolbarExpandKey.background
-    private val enabledToolKeyBackground = GradientDrawable()
     private var direction = 1 // 1 if LTR, -1 if RTL
 
     private val toolbarKeyLayoutParams = LinearLayout.LayoutParams(
@@ -143,32 +118,23 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         colors.setColor(toolbarExpandKey, ColorType.TOOL_BAR_EXPAND_KEY)
         colors.setColor(toolbarExpandKey.background, ColorType.TOOL_BAR_EXPAND_KEY_BACKGROUND)
 
-        // background indicator for pinned keys
-        val color = colors.get(ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND) or -0x1000000 // ignore alpha (in Java this is more readable 0xFF000000)
-        enabledToolKeyBackground.colors = intArrayOf(color, Color.TRANSPARENT)
-        enabledToolKeyBackground.gradientType = GradientDrawable.RADIAL_GRADIENT
-        enabledToolKeyBackground.gradientRadius = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height) / 2.1f
-
         val mToolbarMode = if (isGone) ToolbarMode.HIDDEN else Settings.getValues().mToolbarMode
         if (mToolbarMode == ToolbarMode.TOOLBAR_KEYS) {
             setToolbarVisibility(true)
         }
 
         // toolbar keys setup (no need to hide them any more when locked, because then suggestion strip is gone anyway
-        for (key in getEnabledToolbarKeys(context.prefs())) {
+        for (key in getEnabledToolbarKeys()) {
             val button = createToolbarKey(context, key)
             button.layoutParams = toolbarKeyLayoutParams
             setupKey(button, colors)
             toolbar.addView(button)
         }
-        for (pinnedKey in getPinnedToolbarKeys(context.prefs())) {
+        for (pinnedKey in getPinnedToolbarKeys()) {
             val button = createToolbarKey(context, pinnedKey)
             button.layoutParams = toolbarKeyLayoutParams
             setupKey(button, colors)
             pinnedKeys.addView(button)
-            val pinnedKeyInToolbar = toolbar.findViewWithTag<View>(pinnedKey)
-            if (pinnedKeyInToolbar != null && Settings.getValues().mQuickPinToolbarKeys)
-                pinnedKeyInToolbar.background = enabledToolKeyBackground
         }
         toolbarContainer.doOnNextLayout {
             // set min with of the toolbar so the weight of the toolbar keys actually does something
@@ -274,8 +240,6 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         } else {
             suggestionsStrip.addView(view)
         }
-
-        if (Settings.getValues().mAutoHideToolbar) setToolbarVisibility(false)
     }
 
     fun setMoreSuggestionsHeight(remainingHeight: Int) {
@@ -291,8 +255,6 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     override fun onSharedPreferenceChanged(prefs: SharedPreferences, key: String?) {
         setToolbarButtonsActivatedStateOnPrefChange(pinnedKeys, key)
         setToolbarButtonsActivatedStateOnPrefChange(toolbar, key)
-        if (key == Settings.PREF_ALWAYS_INCOGNITO_MODE)
-            GlobalScope.launch { delay(10); withContext(Dispatchers.Main) { updateKeys() } }
     }
 
     override fun onVisibilityChanged(view: View, visibility: Int) {
@@ -365,61 +327,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     // actually private stuff
 
     private fun onLongClickToolbarKey(view: View) {
-        val tag = view.tag as? ToolbarKey ?: return
-        if (!Settings.getValues().mQuickPinToolbarKeys || view.parent === pinnedKeys) {
-            onLongClickToolbarKey(view) { code, isRepeat -> listener.onCodeInput(code, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, isRepeat) }
-        } else if (view.parent === toolbar) {
-            AudioAndHapticFeedbackManager.getInstance().performHapticFeedback(this, HapticEvent.KEY_LONG_PRESS)
-            val pinnedKeyView = pinnedKeys.findViewWithTag<View>(tag)
-            if (pinnedKeyView == null) {
-                addKeyToPinnedKeys(tag)
-                toolbar.findViewWithTag<View>(tag).background = enabledToolKeyBackground
-                addPinnedKey(context.prefs(), tag)
-            } else {
-                removePinnedKey(context.prefs(), tag)
-                toolbar.findViewWithTag<View>(tag).background = defaultToolbarBackground.constantState?.newDrawable(resources)
-                pinnedKeys.removeView(pinnedKeyView)
-            }
-        }
+        if (view.tag !is ToolbarKey) return
+        onLongClickToolbarKey(view) { code, isRepeat -> listener.onCodeInput(code, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, isRepeat) }
     }
 
     @SuppressLint("ClickableViewAccessibility") // no need for View#performClick, we only return false mostly anyway
     private fun onLongClickSuggestion(wordView: TextView): Boolean {
-        var showIcon = true
-        if (wordView.tag is Int) {
-            val index = wordView.tag as Int
-            val type = suggestedWords.getInfo(index).mSourceDict
-            if (type == Dictionary.DICTIONARY_USER_TYPED || type == Dictionary.DICTIONARY_HARDCODED)
-                showIcon = false
-        }
-        if (showIcon) {
-            val icon = KeyboardIconsSet.instance.getNewDrawable(KeyboardIconsSet.NAME_BIN, context)!!
-            Settings.getValues().mColors.setColor(icon, ColorType.REMOVE_SUGGESTION_ICON)
-            val w = icon.intrinsicWidth
-            val h = icon.intrinsicHeight
-            wordView.setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
-            wordView.ellipsize = TextUtils.TruncateAt.END
-            val downOk = AtomicBoolean(false)
-            wordView.setOnTouchListener { _, motionEvent ->
-                if (motionEvent.action == MotionEvent.ACTION_UP && downOk.get()) {
-                    val x = motionEvent.x
-                    val y = motionEvent.y
-                    if (0 < x && x < w && 0 < y && y < h) {
-                        removeSuggestion(wordView)
-                        wordView.cancelLongPress()
-                        wordView.isPressed = false
-                        return@setOnTouchListener true
-                    }
-                } else if (motionEvent.action == MotionEvent.ACTION_DOWN) {
-                    val x = motionEvent.x
-                    val y = motionEvent.y
-                    if (0 < x && x < w && 0 < y && y < h) {
-                        downOk.set(true)
-                    }
-                }
-                false
-            }
-        }
         if (DebugFlags.DEBUG_ENABLED && (isShowingMoreSuggestionPanel || !showMoreSuggestions())) {
             showSourceDict(wordView)
             return true
@@ -455,31 +368,6 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         KeyboardSwitcher.getInstance().showToast(text, true)
     }
 
-    private fun removeSuggestion(wordView: TextView) {
-        val word = wordView.text.toString()
-        listener.removeSuggestion(word)
-        moreSuggestionsView.dismissPopupKeysPanel()
-        // show suggestions, but without the removed word
-        val suggestedWordInfos = ArrayList<SuggestedWordInfo>()
-        for (i in 0..<suggestedWords.size()) {
-            val info = suggestedWords.getInfo(i)
-            if (info.word != word) suggestedWordInfos.add(info)
-        }
-        suggestedWords.mRawSuggestions?.removeFirst { it.word == word }
-
-        val newSuggestedWords = SuggestedWords(
-            suggestedWordInfos, suggestedWords.mRawSuggestions, suggestedWords.typedWordInfo, suggestedWords.mTypedWordValid,
-            suggestedWords.mWillAutoCorrect, suggestedWords.mIsObsoleteSuggestions, suggestedWords.mInputStyle, suggestedWords.mSequenceNumber
-        )
-        setSuggestions(newSuggestedWords, direction != 1)
-        suggestionsStrip.isVisible = true
-
-        // Show the toolbar if no suggestions are left and the "Auto show toolbar" setting is enabled
-        if (this.suggestedWords.isEmpty && Settings.getValues().mAutoShowToolbar) {
-            setToolbarVisibility(true)
-        }
-    }
-
     private fun clear() {
         suggestionsStrip.removeAllViews()
         if (DEBUG_SUGGESTIONS) removeAllDebugInfoViews()
@@ -500,44 +388,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
     }
 
-    fun updateVoiceKey() {
-        val show = Settings.getValues().mShowsVoiceInputKey
-        toolbar.findViewWithTag<View>(ToolbarKey.VOICE)?.isVisible = show
-        pinnedKeys.findViewWithTag<View>(ToolbarKey.VOICE)?.isVisible = show
-    }
-
     private fun updateKeys() {
-        updateVoiceKey()
         val settingsValues = Settings.getValues()
 
         val toolbarIsExpandable = settingsValues.mToolbarMode == ToolbarMode.EXPANDABLE
-        if (settingsValues.mIncognitoModeEnabled) {
-            toolbarExpandKey.setImageDrawable(incognitoIcon)
-            toolbarExpandKey.isVisible = true
-        } else {
-            toolbarExpandKey.setImageDrawable(toolbarArrowIcon)
-            toolbarExpandKey.isVisible = toolbarIsExpandable
-        }
+        toolbarExpandKey.setImageDrawable(toolbarArrowIcon)
+        toolbarExpandKey.isVisible = toolbarIsExpandable
 
         toolbarExpandKey.setOnClickListener(if (!toolbarIsExpandable) null else this)
         pinnedKeys.visibility = suggestionsStrip.visibility
         isExternalSuggestionVisible = false
-    }
-
-    private fun addKeyToPinnedKeys(pinnedKey: ToolbarKey) {
-        val original = toolbar.findViewWithTag<ImageButton>(pinnedKey) ?: return
-        // copy the original key to a new ImageButton
-        val copy = ImageButton(context, null, R.attr.suggestionWordStyle)
-        copy.tag = pinnedKey
-        copy.scaleType = original.scaleType
-        copy.scaleX = original.scaleX
-        copy.scaleY = original.scaleY
-        copy.contentDescription = original.contentDescription
-        copy.setImageDrawable(original.drawable)
-        copy.layoutParams = original.layoutParams
-        copy.isActivated = original.isActivated
-        setupKey(copy, Settings.getValues().mColors)
-        pinnedKeys.addView(copy)
     }
 
     private fun setupKey(view: ImageButton, colors: Colors) {
@@ -549,9 +409,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     companion object {
-        @JvmField
-        var DEBUG_SUGGESTIONS = false
-        private const val DEBUG_INFO_TEXT_SIZE_IN_DIP = 6.5f
+        const val DEBUG_SUGGESTIONS = false // M2Y Board: no debug settings; its branches are compiled out
         private val TAG = SuggestionStripView::class.java.simpleName
     }
 }

@@ -29,13 +29,9 @@ data class KeyboardId(
     val deviceLocked: Boolean,
     val numberRowEnabled: Boolean,
     val numberRowInSymbols: Boolean,
-    val languageSwitchKeyEnabled: Boolean,
-    val emojiKeyEnabled: Boolean,
     val dpadKeyEnabled: Boolean,
     val customActionLabel: String?,
     val hasShortcutKey: Boolean,
-    val isSplitLayout: Boolean,
-    val oneHandedModeEnabled: Boolean,
     val internalAction: KeyboardLayoutSet.InternalAction?,
     val emojiSearchAvailable: Boolean
 ) {
@@ -53,13 +49,9 @@ data class KeyboardId(
         params.deviceLocked,
         params.settingsValues?.mShowsNumberRow ?: false,
         params.settingsValues?.mShowsNumberRowInSymbols ?: false,
-        params.settingsValues?.isLanguageSwitchKeyEnabled ?: false,
-        params.settingsValues?.mShowsEmojiKey ?: false,
         params.settingsValues?.mShowsDpadKey ?: false,
         params.editorInfo.actionLabel?.toString(),
         params.settingsValues?.mShowsVoiceInputKey ?: false,
-        params.isSplitLayoutEnabled,
-        params.settingsValues?.mOneHandedModeEnabled ?: false,
         params.internalAction,
         params.emojiSearchAvailable,
     ) {

@@ -29,8 +29,6 @@ public class SuggestedWords {
 
     public static final int INPUT_STYLE_NONE = 0;
     public static final int INPUT_STYLE_TYPING = 1;
-    public static final int INPUT_STYLE_UPDATE_BATCH = 2;
-    public static final int INPUT_STYLE_TAIL_BATCH = 3;
     public static final int INPUT_STYLE_APPLICATION_SPECIFIED = 4;
     public static final int INPUT_STYLE_RECORRECTION = 5;
     public static final int INPUT_STYLE_PREDICTION = 6;
@@ -44,11 +42,6 @@ public class SuggestedWords {
     private static final SuggestedWords EMPTY = new SuggestedWords(
             EMPTY_WORD_INFO_LIST, null, null, false,
             false, false, INPUT_STYLE_NONE, NOT_A_SEQUENCE_NUMBER);
-
-    @NonNull
-    private static final SuggestedWords EMPTY_BATCH = new SuggestedWords(
-            EMPTY_WORD_INFO_LIST, null, null, false,
-            false, false, INPUT_STYLE_UPDATE_BATCH, NOT_A_SEQUENCE_NUMBER);
 
     @Nullable
     public final SuggestedWordInfo mTypedWordInfo;
@@ -202,11 +195,6 @@ public class SuggestedWords {
         return SuggestedWords.EMPTY;
     }
 
-    @NonNull
-    public static SuggestedWords getEmptyBatchInstance() {
-        return SuggestedWords.EMPTY_BATCH;
-    }
-
     // Should get rid of the first one (what the user typed previously) from suggestions
     // and replace it with what the user currently typed.
     public static ArrayList<SuggestedWordInfo> getTypedWordAndPreviousSuggestions(
@@ -267,7 +255,6 @@ public class SuggestedWords {
         // the application (including keyboard-computed ones, so this is almost always null)
         public final CompletionInfo mApplicationSpecifiedCompletionInfo;
         public final int mScore;
-        public int mOriginalScore; // relevant only for background data gathering, todo: remove when gathering period is over
         public final int mKindAndFlags;
         public final int mCodePointCount;
         public final Dictionary mSourceDict;

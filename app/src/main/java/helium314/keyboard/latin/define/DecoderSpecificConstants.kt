@@ -21,5 +21,4 @@ object DecoderSpecificConstants {
     const val SHOULD_VERIFY_CHECKSUM = true
     const val SHOULD_USE_DICT_VERSION = true
     const val SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION = false
-    const val SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION = true
 }

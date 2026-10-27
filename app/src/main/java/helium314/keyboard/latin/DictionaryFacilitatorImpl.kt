@@ -5,30 +5,22 @@
  */
 package helium314.keyboard.latin
 
-import android.Manifest
 import android.content.Context
-import android.provider.UserDictionary
 import android.util.LruCache
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
 import helium314.keyboard.latin.DictionaryFacilitator.DictionaryInitializationListener
-import helium314.keyboard.latin.NgramContext.WordInfo
 import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
 import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.common.decapitalize
 import helium314.keyboard.latin.common.mightBeEmoji
-import helium314.keyboard.latin.common.splitOnWhitespace
-import helium314.keyboard.latin.dictionary.AppsBinaryDictionary
-import helium314.keyboard.latin.dictionary.ContactsBinaryDictionary
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.dictionary.DictionaryFactory
 import helium314.keyboard.latin.dictionary.DictionaryStats
 import helium314.keyboard.latin.dictionary.ExpandableBinaryDictionary
 import helium314.keyboard.latin.dictionary.UserBinaryDictionary
-import helium314.keyboard.latin.permissions.PermissionsUtil
-import helium314.keyboard.latin.personalization.UserHistoryDictionary
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.utils.Log
@@ -41,7 +33,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
@@ -61,16 +52,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
     @Volatile
     private var mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
-
-    // The library does not deal well with ngram history for auto-capitalized words, so we adjust
-    // the ngram context to store next word suggestions for such cases.
-    // todo: this is awful, find a better solution / workaround
-    //  or remove completely? not sure if it's actually an improvement
-    //  should be fixed in the library, but that's not feasible with current user-provides-library approach
-    //  added in 12cbd43bda7d0f0cd73925e9cf836de751c32ed0 / https://github.com/HeliBorg/HeliBoard/issues/135
-    private var tryChangingWords = false
-    private var changeFrom = ""
-    private var changeTo = ""
 
     // todo: write cache never set, and never read (only written)
     //  tried to use read cache for a while, but small performance improvements are not worth the work,
@@ -114,12 +95,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         return currentlyPreferredDictionaryGroup.locale
     }
 
-    override fun usesSameSettings(locales: List<Locale>, contacts: Boolean, apps: Boolean, personalization: Boolean): Boolean {
-        val dictGroup = dictionaryGroups[0] // settings are the same for all groups
-        return contacts == dictGroup.hasDict(Dictionary.TYPE_CONTACTS)
-                && apps == dictGroup.hasDict(Dictionary.TYPE_APPS)
-                && personalization == dictGroup.hasDict(Dictionary.TYPE_USER_HISTORY)
-                && locales.size == dictionaryGroups.size
+    override fun usesSameSettings(locales: List<Locale>): Boolean {
+        return locales.size == dictionaryGroups.size
                 && locales.none { findDictionaryGroupWithLocale(dictionaryGroups, it) == null }
     }
 
@@ -128,9 +105,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     override fun resetDictionaries(
         context: Context,
         newLocale: Locale,
-        useContactsDict: Boolean,
-        useAppsDict: Boolean,
-        usePersonalizedDicts: Boolean,
         forceReloadMainDictionary: Boolean,
         dictNamePrefix: String,
         listener: DictionaryInitializationListener?
@@ -139,13 +113,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         val locales = getUsedLocales(newLocale, context)
 
-        val subDictTypesToUse = listOfNotNull(
-            Dictionary.TYPE_USER,
-            if (useAppsDict) Dictionary.TYPE_APPS else null,
-            if (usePersonalizedDicts) Dictionary.TYPE_USER_HISTORY else null,
-            if (useContactsDict && PermissionsUtil.checkAllPermissionsGranted(context, Manifest.permission.READ_CONTACTS))
-                Dictionary.TYPE_CONTACTS else null
-        )
+        val subDictTypesToUse = listOf(Dictionary.TYPE_USER) // M2Y Board: no user history, nothing is learned
 
         val (newDictionaryGroups, existingDictsToCleanup) =
             getNewDictGroupsAndDictsToCleanup(locales, subDictTypesToUse, forceReloadMainDictionary, dictNamePrefix, context)
@@ -289,149 +257,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
     // -------------- actual dictionary stuff like getting suggestions ------------
 
-    override fun addToUserHistory(
-        suggestion: String, wasAutoCapitalized: Boolean, ngramContext: NgramContext,
-        timeStampInSeconds: Long, blockPotentiallyOffensive: Boolean
-    ) {
-        // Update the spelling cache before learning. Words that are not yet added to user history
-        // and appear in no other language model are not considered valid.
-        putWordIntoValidSpellingWordCache("addToUserHistory", suggestion)
-
-        val words = suggestion.splitOnWhitespace().dropLastWhile { it.isEmpty() }
-
-        // increase / decrease confidence
-        if (words.size == 1) // ignore if more than a single word, which only happens with (badly working) spaceAwareGesture
-            adjustConfidences(suggestion, wasAutoCapitalized)
-
-        // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
-        val sv = Settings.getValues()
-        if (sv.mAddToPersonalDictionary // require the opt-in
-            && sv.mAutoCorrectEnabled == sv.mAutoCorrectionEnabledPerUserSettings // don't add if user wants autocorrect but input field does not, see https://github.com/HeliBorg/HeliBoard/issues/427#issuecomment-1905438000
-            && dictionaryGroups[0].hasDict(Dictionary.TYPE_USER_HISTORY) // require personalized suggestions
-            && !wasAutoCapitalized // we can't be 100% sure about what the user intended to type, so better don't add it
-            && words.size == 1 // only single words
-        ) {
-            addToPersonalDictionaryIfInvalidButInHistory(suggestion)
-        }
-
-        var ngramContextForCurrentWord = ngramContext
-        val preferredGroup = currentlyPreferredDictionaryGroup
-        for (i in words.indices) {
-            val currentWord = words[i]
-            val wasCurrentWordAutoCapitalized = (i == 0) && wasAutoCapitalized
-            // add to history for preferred dictionary group, to avoid mixing languages in history
-            addWordToUserHistory(
-                preferredGroup, ngramContextForCurrentWord, currentWord,
-                wasCurrentWordAutoCapitalized, timeStampInSeconds.toInt(), blockPotentiallyOffensive
-            )
-            ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
-
-            // remove manually entered blacklisted words from blacklist for likely matching languages
-            dictionaryGroups.filter { it.confidence == preferredGroup.confidence }.forEach {
-                it.removeFromBlacklist(currentWord)
-            }
-        }
-    }
-
-    private fun addWordToUserHistory(
-        dictionaryGroup: DictionaryGroup, ngramContext: NgramContext, word: String, wasAutoCapitalized: Boolean,
-        timeStampInSeconds: Int, blockPotentiallyOffensive: Boolean
-    ) {
-        val userHistoryDictionary = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
-
-        val mainFreq = dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.getFrequency(word) ?: Dictionary.NOT_A_PROBABILITY
-        if (mainFreq == 0 && blockPotentiallyOffensive)
-            return
-        if (tryChangingWords)
-            tryChangingWords = ngramContext.changeWordIfAfterBeginningOfSentence(changeFrom, changeTo)
-
-        val wordToUse: String
-        // Check for isBeginningOfSentenceContext too, because not all text fields auto-capitalize in this case.
-        // Even if the user capitalizes manually, they most likely don't want the capitalized form suggested.
-        if (wasAutoCapitalized || ngramContext.isBeginningOfSentenceContext) {
-            val decapitalizedWord = word.decapitalize(dictionaryGroup.locale) // try undoing auto-capitalization
-            if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
-                && !isValidWord(decapitalizedWord, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
-            ) {
-                // If the word was auto-capitalized and exists only as a capitalized word in the
-                // dictionary, then we must not downcase it before registering it. For example,
-                // the name of the contacts in start-of-sentence position would come here with the
-                // wasAutoCapitalized flag: if we downcase it, we'd register a lower-case version
-                // of that contact's name which would end up popping in suggestions.
-                wordToUse = word
-            } else {
-                // If however the word is not in the dictionary, or exists as a de-capitalized word
-                // only, then we consider that was a lower-case word that had been auto-capitalized.
-                wordToUse = decapitalizedWord
-                tryChangingWords = true
-                changeFrom = word
-                changeTo = wordToUse
-            }
-        } else {
-            // HACK: We'd like to avoid adding the capitalized form of common words to the User
-            // History dictionary in order to avoid suggesting them until the dictionary
-            // consolidation is done.
-            // TODO: Remove this hack when ready.
-            val lowerCasedWord = word.lowercase(dictionaryGroup.locale)
-            val lowerCaseFreqInMainDict = dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.getFrequency(lowerCasedWord)
-                ?: Dictionary.NOT_A_PROBABILITY
-            wordToUse = if (mainFreq < lowerCaseFreqInMainDict
-                && lowerCaseFreqInMainDict >= CAPITALIZED_FORM_MAX_PROBABILITY_FOR_INSERT
-            ) {
-                // Use lower cased word as the word can be a distracter of the popular word.
-                lowerCasedWord
-            } else {
-                word
-            }
-        }
-        // We demote unrecognized words (frequency <= 0) by specifying them as "invalid".
-        // We don't add words with 0-frequency (assuming they would be profanity etc.).
-        val isValid = mainFreq > 0
-        UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
-    }
-
-    private fun addToPersonalDictionaryIfInvalidButInHistory(word: String) {
-        if (word.length <= 1) return
-        val dictionaryGroup = clearlyPreferredDictionaryGroup ?: return
-        val userDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER) ?: return
-        val userHistoryDict = dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY) ?: return
-        if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup))
-            return // valid word, no reason to auto-add it to personal dict
-        if (userDict.isInDictionary(word))
-            return // should never happen, but better be safe
-
-        // User history always reports words as invalid, so we check the frequency instead.
-        // Testing shows that after 2 times adding, the frequency is 111, and then rises slowly with usage (values vary slightly).
-        // 120 is after 3 uses of the word, so we simply require more than that. todo: Could be made configurable.
-        // Words added to dictionaries (user and history) seem to be found only after some delay.
-        // This is not too bad, but it delays adding in case a user wants to fill a dictionary using this functionality
-        if (userHistoryDict.getFrequency(word) > 120) {
-            scope.launch {
-                // adding can throw IllegalArgumentException: Unknown URL content://user_dictionary/words
-                // https://stackoverflow.com/q/41474623 https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/490
-                // apparently some devices don't have a dictionary? or it's just sporadic hiccups?
-                runCatching { UserDictionary.Words.addWord(userDict.mContext, word, 250, null, dictionaryGroup.locale) }
-            }
-        }
-    }
-
-    private fun putWordIntoValidSpellingWordCache(caller: String, originalWord: String) {
-        if (mValidSpellingWordWriteCache == null)
-            return
-
-        val lowerCaseWord = originalWord.lowercase(currentLocale)
-        val lowerCaseValid = isValidSpellingWord(lowerCaseWord)
-        mValidSpellingWordWriteCache?.put(lowerCaseWord, lowerCaseValid)
-
-        val capitalWord = StringUtils.capitalizeFirstAndDowncaseRest(originalWord, currentLocale)
-        val capitalValid = if (lowerCaseValid) {
-            true // The lower case form of the word is valid, so the upper case must be valid.
-        } else {
-            isValidSpellingWord(capitalWord)
-        }
-        mValidSpellingWordWriteCache?.put(capitalWord, capitalValid)
-    }
-
     override fun adjustConfidences(word: String, wasAutoCapitalized: Boolean) {
         if (dictionaryGroups.size == 1 || word.contains(Constants.WORD_SEPARATOR))
             return
@@ -457,29 +282,6 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
     /** the dictionaryGroup with most confidence, first group when tied  */
     private val currentlyPreferredDictionaryGroup: DictionaryGroup get() = dictionaryGroups.maxBy { it.confidence }
-
-    /** the only dictionary group, or the dictionaryGroup confidence >= DictionaryGroup.MAX_CONFIDENCE if all others have 0 */
-    private val clearlyPreferredDictionaryGroup: DictionaryGroup? get() {
-        if (dictionaryGroups.size == 1) return dictionaryGroups.first() // confidence not used if we only have a single group
-
-        val preferred = currentlyPreferredDictionaryGroup
-        if (preferred.confidence < DictionaryGroup.MAX_CONFIDENCE) return null
-        if (dictionaryGroups.any { it.confidence > 0 && it !== preferred })
-            return null
-        return preferred
-    }
-
-    override fun unlearnFromUserHistory(word: String, ngramContext: NgramContext,
-                    timeStampInSeconds: Long, event: DictionaryFacilitator.UnlearnEvent) {
-        // TODO: Decide whether or not to remove the word on BACKSPACE.
-        if (event != DictionaryFacilitator.UnlearnEvent.BACKSPACE) {
-            currentlyPreferredDictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(word)
-        }
-
-        // Update the spelling cache after unlearning. Words that are removed from user history
-        // and appear in no other language model are not considered valid.
-        putWordIntoValidSpellingWordCache("unlearnFromUserHistory", word.lowercase(Locale.getDefault()))
-    }
 
     // TODO: Revise the way to fusion suggestion results.
     override fun getSuggestionResults(
@@ -534,11 +336,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             // actually contains the word. But personal and addon dictionaries may contain shortcuts,
             // which do not pass an isInDictionary check (e.g. emojis).
             // (if the main dict contains shortcuts to non-words, this will break!)
-            val checkForGarbage = composedData.mIsBatchMode && (dictType == Dictionary.TYPE_USER_HISTORY || dictType == Dictionary.TYPE_MAIN)
+            val checkForGarbage = composedData.mIsBatchMode && dictType == Dictionary.TYPE_MAIN
 
             for (info in dictionarySuggestions) {
                 val word = info.word
-                if (isBlacklisted(word) || SupportedEmojis.isUnsupported(word)) // don't add blacklisted words and unsupported emojis
+                if (SupportedEmojis.isUnsupported(word)) // don't add unsupported emojis
                     continue
                 if (checkForGarbage
                     // consider the user might use custom main dictionary containing shortcuts
@@ -576,22 +378,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
     // todo: move into dictionaryGroup?
     private fun isValidWord(word: String, dictionariesToCheck: Array<String>, dictionaryGroup: DictionaryGroup): Boolean {
-        if (word.isEmpty() || dictionaryGroup.isBlacklisted(word)) return false
+        if (word.isEmpty()) return false
         return dictionariesToCheck.any { dictionaryGroup.getDict(it)?.isValidWord(word) == true }
-    }
-
-    private fun isBlacklisted(word: String): Boolean = dictionaryGroups.any { it.isBlacklisted(word) }
-
-    override fun removeWord(word: String) {
-        for (dictionaryGroup in dictionaryGroups) {
-            dictionaryGroup.removeWord(word)
-        }
-    }
-
-    override fun clearUserHistoryDictionary(context: Context) {
-        for (dictionaryGroup in dictionaryGroups) {
-            dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)?.clear()
-        }
     }
 
     override fun localesAndConfidences(): String? {
@@ -618,18 +406,12 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     companion object {
         private val TAG = DictionaryFacilitatorImpl::class.java.simpleName
 
-        // HACK: This threshold is being used when adding a capitalized entry in the User History dictionary.
-        private const val CAPITALIZED_FORM_MAX_PROBABILITY_FOR_INSERT = 140
-
         private fun createSubDict(
             dictType: String, context: Context, locale: Locale, dictFile: File?, dictNamePrefix: String
         ): ExpandableBinaryDictionary? {
             try {
                 return when (dictType) {
-                    Dictionary.TYPE_USER_HISTORY -> UserHistoryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
                     Dictionary.TYPE_USER -> UserBinaryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
-                    Dictionary.TYPE_CONTACTS -> ContactsBinaryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
-                    Dictionary.TYPE_APPS -> AppsBinaryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
                     else -> throw IllegalArgumentException("unknown dictionary type $dictType")
                 }
             } catch (e: SecurityException) {
@@ -708,40 +490,6 @@ private class DictionaryGroup(
 ) {
     private val subDicts: ConcurrentHashMap<String, ExpandableBinaryDictionary> = ConcurrentHashMap(subDicts)
 
-    /** Removes a word from all dictionaries in this group. If the word is in a read-only dictionary, it is blacklisted. */
-    fun removeWord(word: String) {
-        // remove from user history
-        getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(word)
-
-        // and from personal dictionary
-        getSubDict(Dictionary.TYPE_USER)?.removeUnigramEntryDynamically(word)
-
-        val contactsDict = getSubDict(Dictionary.TYPE_CONTACTS)
-        if (contactsDict != null && contactsDict.isInDictionary(word)) {
-            contactsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
-            addToBlacklist(word)
-            return
-        }
-
-        val appsDict = getSubDict(Dictionary.TYPE_APPS)
-        if (appsDict != null && appsDict.isInDictionary(word)) {
-            appsDict.removeUnigramEntryDynamically(word) // will be gone until next reload of dict
-            addToBlacklist(word)
-            return
-        }
-
-        val mainDict = mainDict ?: return
-        if (mainDict.isValidWord(word)) {
-            addToBlacklist(word)
-            return
-        }
-
-        val lowercase = word.lowercase(locale)
-        if (getDict(Dictionary.TYPE_MAIN)!!.isValidWord(lowercase)) {
-            addToBlacklist(lowercase)
-        }
-    }
-
     // --------------- Confidence for multilingual typing -------------------
 
     // Confidence that the most probable language is actually the language the user is
@@ -779,61 +527,6 @@ private class DictionaryGroup(
         return 1f
     }
 
-    // --------------- Blacklist -------------------
-
-    private val scope = CoroutineScope(Dispatchers.IO)
-
-    // words cannot be (permanently) removed from some dictionaries, so we use a blacklist for "removing" words
-    private val blacklistFile = if (context?.filesDir == null) null
-    else {
-        val file = File(context.filesDir.absolutePath + File.separator + "blacklists" + File.separator + locale.toLanguageTag() + ".txt")
-        if (file.isDirectory) file.delete() // this apparently was an issue in some versions
-        if (file.parentFile?.exists() == true || file.parentFile?.mkdirs() == true) file
-        else null
-    }
-
-    private val blacklist = hashSetOf<String>().apply {
-        if (blacklistFile?.isFile != true) return@apply
-        scope.launch {
-            synchronized(this) {
-                try {
-                    addAll(blacklistFile.readLines())
-                } catch (e: IOException) {
-                    Log.e(TAG, "Exception while trying to read blacklist from ${blacklistFile.name}", e)
-                }
-            }
-        }
-    }
-
-    fun isBlacklisted(word: String) = blacklist.contains(word)
-
-    fun addToBlacklist(word: String) {
-        if (!blacklist.add(word) || blacklistFile == null) return
-        scope.launch {
-            synchronized(this) {
-                try {
-                    if (blacklistFile.isDirectory) blacklistFile.delete()
-                    blacklistFile.appendText("$word\n")
-                } catch (e: IOException) {
-                    Log.e(TAG, "Exception while trying to add word \"$word\" to blacklist ${blacklistFile.name}", e)
-                }
-            }
-        }
-    }
-
-    fun removeFromBlacklist(word: String) {
-        if (!blacklist.remove(word) || blacklistFile == null) return
-        scope.launch {
-            synchronized(this) {
-                try {
-                    val newLines = blacklistFile.readLines().filterNot { it == word }
-                    blacklistFile.writeText(newLines.joinToString("\n"))
-                } catch (e: IOException) {
-                    Log.e(TAG, "Exception while trying to remove word \"$word\" to blacklist ${blacklistFile.name}", e)
-                }
-            }
-        }
-    }
 
     // --------------- Dictionary handling -------------------
 

@@ -14,7 +14,6 @@ import android.view.inputmethod.EditorInfo
 import helium314.keyboard.keyboard.Key
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.KeyboardElement
-import helium314.keyboard.keyboard.KeyboardId
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Constants
@@ -26,6 +25,7 @@ internal class KeyCodeDescriptionMapper private constructor() {
         // Special non-character codes defined in Keyboard
         put(Constants.CODE_SPACE, R.string.spoken_description_space)
         put(KeyCode.DELETE, R.string.spoken_description_delete)
+        put(KeyCode.IME_HIDE_UI, R.string.space_swipe_hide_keyboard_entry) // M2Y Board: bottom-right hide key
         put(Constants.CODE_ENTER, R.string.spoken_description_return)
         put(KeyCode.SETTINGS, R.string.spoken_description_settings)
         put(KeyCode.SHIFT, R.string.spoken_description_shift)

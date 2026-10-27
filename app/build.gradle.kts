@@ -19,8 +19,8 @@ android {
         applicationId = "com.m2y.board"
         minSdk = 21
         targetSdk = 37
-        versionCode = 125076800
-        versionName = "1.25.07.68.0"
+        versionCode = 125076801
+        versionName = "1.25.07.68.1"
         ndk {
             abiFilters.clear()
             // arm64 for the BYD head unit, x86_64 for MuMuPlayer testing
@@ -41,12 +41,6 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.findByName("m2y")
-            isMinifyEnabled = true
-            isShrinkResources = false
-            isDebuggable = false
-            isJniDebuggable = false
-        }
-        create("nouserlib") { // same as release, but does not allow the user to provide a library
             isMinifyEnabled = true
             isShrinkResources = false
             isDebuggable = false

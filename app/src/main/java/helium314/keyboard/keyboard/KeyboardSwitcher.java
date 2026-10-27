@@ -9,7 +9,6 @@ package helium314.keyboard.keyboard;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
@@ -18,13 +17,11 @@ import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodSubtype;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -41,18 +38,14 @@ import helium314.keyboard.keyboard.internal.ShiftMode;
 import helium314.keyboard.keyboard.internal.keyboard_parser.EmojiParserKt;
 import helium314.keyboard.latin.CapsMode;
 import helium314.keyboard.latin.InputView;
-import helium314.keyboard.latin.KeyboardWrapperView;
 import helium314.keyboard.latin.LatinIME;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.settings.Settings;
-import helium314.keyboard.latin.settings.SettingsKt;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.utils.CapsModeUtils;
-import helium314.keyboard.latin.utils.FloatingKeyboardUtils;
-import helium314.keyboard.latin.utils.FoldableUtils;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LanguageOnSpacebarUtils;
 import helium314.keyboard.latin.utils.Log;
@@ -66,7 +59,7 @@ public final class KeyboardSwitcher {
     private static final String TAG = KeyboardSwitcher.class.getSimpleName();
 
     private InputView mCurrentInputView;
-    private KeyboardWrapperView mKeyboardViewWrapper;
+    private FrameLayout mKeyboardViewWrapper;
     private View mMainKeyboardFrame;
     private MainKeyboardView mKeyboardView;
     private EmojiPalettesView mEmojiPalettesView;
@@ -160,7 +153,7 @@ public final class KeyboardSwitcher {
                 .setInternalAction(internalAction)
                 .build();
         try {
-            mState.onLoadKeyboard(currentAutoCapsState, currentRecapitalizeState, settingsValues.mOneHandedModeEnabled);
+            mState.onLoadKeyboard(currentAutoCapsState, currentRecapitalizeState);
         } catch (KeyboardLayoutSet.Companion.KeyboardLayoutSetException e) {
             Log.e(TAG, "loading keyboard failed: " + e.getKeyboardId(), e.getCause());
             try {
@@ -168,7 +161,7 @@ public final class KeyboardSwitcher {
                 mKeyboardLayoutSet = builder.setKeyboardGeometry(keyboardWidth, keyboardHeight)
                         .setSubtype(RichInputMethodSubtype.Companion.get(defaults))
                         .build();
-                mState.onLoadKeyboard(currentAutoCapsState, currentRecapitalizeState, false);
+                mState.onLoadKeyboard(currentAutoCapsState, currentRecapitalizeState);
                 showToast("error loading the keyboard, falling back to defaults", false);
             } catch (KeyboardLayoutSet.Companion.KeyboardLayoutSetException e2) {
                 Log.e(TAG, "even fallback to defaults failed: " + e2.getKeyboardId(), e2.getCause());
@@ -242,9 +235,8 @@ public final class KeyboardSwitcher {
         // @see #getVisibleKeyboardView() and
         // @see LatinIME#onComputeInset(android.inputmethodservice.InputMethodService.Insets)
         mMainKeyboardFrame.setVisibility(visibility);
-        mKeyboardViewWrapper.setVisibility(Settings.getInstance().readShowToolbarOnly() ? View.GONE : View.VISIBLE);
+        mKeyboardViewWrapper.setVisibility(View.VISIBLE);
         mEmojiPalettesView.setVisibility(View.GONE);
-        mEmojiPalettesView.stopEmojiPalettes();
         mEmojiTabStripView.setVisibility(View.GONE);
         mClipboardStripScrollView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(stripVisibility);
@@ -308,7 +300,6 @@ public final class KeyboardSwitcher {
             } else if (toggleState == KeyboardSwitchState.CLIPBOARD) {
                 setClipboardKeyboard();
             } else {
-                mEmojiPalettesView.stopEmojiPalettes();
                 mEmojiPalettesView.setVisibility(View.GONE);
 
                 mClipboardHistoryView.stopClipboardHistory();
@@ -329,38 +320,6 @@ public final class KeyboardSwitcher {
             Log.d(TAG, "updateShiftState: " + " autoCapsFlags=" + CapsModeUtils.flagsToString(autoCapsFlags) + " recapitalizeMode=" + recapitalizeMode);
         }
         mState.onUpdateShiftState(autoCapsFlags, recapitalizeMode);
-    }
-
-    public void setOneHandedModeEnabled(boolean enabled, boolean force) {
-        if (!force && mKeyboardViewWrapper.getOneHandedModeEnabled() == enabled) {
-            return;
-        }
-        final Settings settings = Settings.getInstance();
-        mKeyboardViewWrapper.setOneHandedModeEnabled(enabled);
-        mKeyboardViewWrapper.setOneHandedGravity(settings.getCurrent().mOneHandedModeGravity);
-
-        // oneHandeMode is always disabled when floating, and we shouldn't mess up the setting
-        if (enabled != settings.getCurrent().mOneHandedModeEnabled)
-            settings.writeOneHandedModeEnabled(enabled);
-        reloadKeyboard();
-    }
-
-    public void toggleSplitKeyboardMode() {
-        final Settings settings = Settings.getInstance();
-        settings.writeSplitKeyboardEnabled(
-            !settings.getCurrent().mIsSplitKeyboardEnabled,
-            mCurrentOrientation == Configuration.ORIENTATION_LANDSCAPE,
-            FoldableUtils.INSTANCE.isFolded()
-        );
-        setOneHandedModeEnabled(settings.getCurrent().mOneHandedModeEnabled, true);
-        reloadKeyboard();
-    }
-
-    public void reloadKeyboard() {
-        if (mCurrentInputView == null)
-            return;
-        mEmojiPalettesView.clearKeyboardCache();
-        reloadMainKeyboard();
     }
 
     public void reloadMainKeyboard() {
@@ -496,9 +455,6 @@ public final class KeyboardSwitcher {
             mKeyboardView.cancelAllOngoingEvents();
             mKeyboardView.deallocateMemory();
         }
-        if (mEmojiPalettesView != null) {
-            mEmojiPalettesView.stopEmojiPalettes();
-        }
         if (mClipboardHistoryView != null) {
             mClipboardHistoryView.stopClipboardHistory();
         }
@@ -528,14 +484,18 @@ public final class KeyboardSwitcher {
         updateKeyboardThemeAndContextThemeWrapper(displayContext, KeyboardTheme.getKeyboardTheme(displayContext));
         mCurrentInputView = (InputView)LayoutInflater.from(mThemeContext).inflate(R.layout.input_view, null);
         mMainKeyboardFrame = mCurrentInputView.findViewById(R.id.main_keyboard_frame);
+        // M2Y Board: center the narrowed keyboard (strip, keys, emoji, clipboard) in the full-width frame
+        final int sidePadding = (ResourceUtils.getDefaultKeyboardWidth(displayContext)
+                - ResourceUtils.getKeyboardWidth(displayContext, Settings.getValues())) / 2;
+        mMainKeyboardFrame.setPadding(sidePadding, 0, sidePadding, 0);
         mEmojiPalettesView = mCurrentInputView.findViewById(R.id.emoji_palettes_view);
         mClipboardHistoryView = mCurrentInputView.findViewById(R.id.clipboard_history_view);
         mFakeToastView = mCurrentInputView.findViewById(R.id.fakeToast);
 
         mKeyboardViewWrapper = mCurrentInputView.findViewById(R.id.keyboard_view_wrapper);
-        mKeyboardViewWrapper.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);
         mKeyboardView = mCurrentInputView.findViewById(R.id.keyboard_view);
-        mKeyboardView.setHardwareAcceleratedDrawingEnabled(isHardwareAcceleratedDrawingEnabled);
+        // M2Y: no hardware layer on the main keyboard; the IME surface is recreated on every show, so the layer was
+        // re-allocated, fully drawn and flushed each time (~10-25 ms on the DiLink GPU) before the keyboard appeared
         mKeyboardView.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);
         mEmojiPalettesView.setHardwareAcceleratedDrawingEnabled(isHardwareAcceleratedDrawingEnabled);
         mEmojiPalettesView.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);
@@ -697,26 +657,6 @@ public final class KeyboardSwitcher {
             if (keyboardView != null) {
                 keyboardView.cancelDoubleTapShiftKeyTimer();
             }
-        }
-
-        @Override
-        public void setOneHandedModeEnabled(boolean enabled) {
-            KeyboardSwitcher.this.setOneHandedModeEnabled(enabled, false);
-        }
-
-        @Override
-        public void switchOneHandedMode() {
-            mKeyboardViewWrapper.switchOneHandedModeSide();
-            Settings.getInstance().writeOneHandedModeGravity(mKeyboardViewWrapper.getOneHandedGravity());
-        }
-
-        @Override
-        public void setFloatingKeyboardEnabled(boolean enabled) {
-            if (enabled != Settings.getValues().mIsFloatingKeyboard)
-                // mIsFloatingKeyboard is always disabled when device is locked, and we shouldn't mess up the setting
-                SettingsKt.setFloatingKeyboardEnabled(mThemeContext, enabled);
-            if (enabled) FloatingKeyboardUtils.setFloating(mCurrentInputView);
-            else FloatingKeyboardUtils.disableFloating(mCurrentInputView);
         }
 
         @Override

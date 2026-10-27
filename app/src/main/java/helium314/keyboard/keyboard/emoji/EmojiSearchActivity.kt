@@ -273,7 +273,6 @@ class EmojiSearchActivity : ComponentActivity() {
         pressedKey?.let {
             val emoji = getEmoji(it) ?: return@let
             intent.putExtra(EMOJI_KEY, emoji)
-            RecentEmojis.add(emoji)
         }
         sendBroadcast(intent)
         super.onStop()
@@ -295,7 +294,7 @@ class EmojiSearchActivity : ComponentActivity() {
             .setKeyboardGeometry(keyboardWidth, EmojiLayoutParams(resources).emojiKeyboardHeight).build()
         val keyboard = DynamicGridKeyboard.ofRowCount(prefs(), layoutSet.getKeyboard(KeyboardElement.EMOJI_RECENTS),
             if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 1 else 2,
-            false, keyboardWidth)
+            keyboardWidth)
         val builder = KeyboardBuilder(this, KeyboardParams())
         builder.load(keyboard.mId)
         keyboardParams = builder.mParams
@@ -324,8 +323,6 @@ class EmojiSearchActivity : ComponentActivity() {
                 dictionaryFacilitator?.getWordProperty(getEmojiNeutralVersion(emoji))?.let {
                     if (it.mHasShortcuts) it.mShortcutTargets[0]?.mWord else null
                 } else null
-
-            override fun onRemoveRecentsKey(key: Key?) {}
         })
         KeyboardSwitcher.getInstance().resetKeyboardStateToAlphabet()
         Log.d(TAG, "init end")

@@ -17,13 +17,11 @@ import helium314.keyboard.keyboard.KeyboardId
 import helium314.keyboard.keyboard.internal.keyboard_parser.EmojiParser
 import helium314.keyboard.keyboard.internal.keyboard_parser.KeyboardParser
 import helium314.keyboard.keyboard.internal.keyboard_parser.LocaleKeyboardInfos
-import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.sumOf
 import org.xmlpull.v1.XmlPullParser
 
 open class KeyboardBuilder<KP : KeyboardParams>(protected val mContext: Context, @JvmField val mParams: KP) {
@@ -101,10 +99,6 @@ open class KeyboardBuilder<KP : KeyboardParams>(protected val mContext: Context,
     }
 
     open fun build(): Keyboard {
-        if (mParams.mId.isSplitLayout
-                && mParams.mId.element in KeyboardElement.ALPHABET..KeyboardElement.SYMBOLS_SHIFTED) {
-            addSplit()
-        }
         addKeysToParams()
         return Keyboard(mParams)
     }
@@ -122,86 +116,6 @@ open class KeyboardBuilder<KP : KeyboardParams>(protected val mContext: Context,
                 currentX += it.mAbsoluteWidth
             }
             currentY += row.first().mAbsoluteHeight
-        }
-    }
-
-    private fun addSplit() {
-        val spacerRelativeWidth = Settings.getValues().mSplitKeyboardSpacerRelativeWidth
-        // adjust gaps for the whole keyboard, so it's the same for all rows
-        mParams.mRelativeHorizontalGap *= 1f / (1f + spacerRelativeWidth)
-        mParams.mHorizontalGap = (mParams.mRelativeHorizontalGap * mParams.mId.width).toInt()
-        var maxWidthBeforeSpacer = 0f
-        var maxWidthAfterSpacer = 0f
-        for (row in keysInRows) {
-            val y = row.first().yPos // all have the same y, so this is fine
-            val relativeWidthSum = row.sumOf { it.mWidth } // sum up relative widths
-            val spacer = KeyParams.newSpacer(mParams, spacerRelativeWidth)
-            // insert spacer before first key that starts right of the center (also consider gap)
-            var insertIndex = row.indexOfFirst { it.xPos + it.mAbsoluteWidth / 3 > mParams.mOccupiedWidth / 2 }
-                .takeIf { it > -1 } ?: (row.size / 2) // fallback should never be needed, but better than having an error
-            val indexOfProperSpace = row.indexOfFirst { key ->
-                // should work reasonably with customizable layouts, where space key might be completely different:
-                // "normal" width space keys are ignored, and the possibility of space being first in row is considered
-                key.mCode == Constants.CODE_SPACE && key.mWidth > row.first { !it.isSpacer && it.mCode != Constants.CODE_SPACE }.mWidth * 1.5f
-            }
-            if (indexOfProperSpace >= 0) {
-                val spaceLeft = row[indexOfProperSpace]
-                reduceSymbolAndActionKeyWidth(row)
-                insertIndex = row.indexOf(spaceLeft) + 1
-                val widthBeforeSpace = row.subList(0, insertIndex - 1).sumOf { it.mWidth }
-                val widthAfterSpace = row.subList(insertIndex, row.size).sumOf { it.mWidth }
-                val spaceLeftWidth = (maxWidthBeforeSpacer - widthBeforeSpace).coerceAtLeast(mParams.mDefaultKeyWidth)
-                val spaceRightWidth = (maxWidthAfterSpacer - widthAfterSpace).coerceAtLeast(mParams.mDefaultKeyWidth)
-                val spacerWidth = spaceLeft.mWidth + spacerRelativeWidth - spaceLeftWidth - spaceRightWidth
-                if (spacerWidth > 0.05f) {
-                    // only insert if the spacer has a reasonable width
-                    val spaceRight = KeyParams(spaceLeft)
-                    spaceLeft.mWidth = spaceLeftWidth
-                    spaceRight.mWidth = spaceRightWidth
-                    spacer.mWidth = spacerWidth
-                    row.add(insertIndex, spaceRight)
-                    row.add(insertIndex, spacer)
-                } else {
-                    // otherwise increase space width, so other keys are resized properly
-                    spaceLeft.mWidth += spacerWidth
-                }
-            } else {
-                val widthBeforeSpacer = row.subList(0, insertIndex).sumOf { it.mWidth }
-                val widthAfterSpacer = row.subList(insertIndex, row.size).sumOf { it.mWidth }
-                maxWidthBeforeSpacer = maxWidthBeforeSpacer.coerceAtLeast(widthBeforeSpacer)
-                maxWidthAfterSpacer = maxWidthAfterSpacer.coerceAtLeast(widthAfterSpacer)
-                row.add(insertIndex, spacer)
-            }
-            // re-calculate relative widths
-            val relativeWidthSumNew = row.sumOf { it.mWidth }
-            val widthFactor = relativeWidthSum / relativeWidthSumNew
-            // re-calculate absolute sizes and positions
-            var currentX = mParams.mLeftPadding.toFloat()
-            row.forEach {
-                it.mWidth *= widthFactor
-                it.setAbsoluteDimensions(currentX, y)
-                currentX += it.mAbsoluteWidth
-            }
-        }
-    }
-
-    // reduce width of symbol and action key if in the (to be split) row, and add this width to space to keep other key size constant
-    private fun reduceSymbolAndActionKeyWidth(row: ArrayList<KeyParams>) {
-        val spaceKey = row.first { it.mCode == Constants.CODE_SPACE }
-        if (spaceKey.mWidth >= 0.5) return // only if space key is small
-        val symbolKey = row.firstOrNull { it.mCode == KeyCode.SYMBOL_ALPHA }
-        val symbolKeyWidth = symbolKey?.mWidth ?: 0f
-        if (symbolKeyWidth > mParams.mDefaultKeyWidth) {
-            val widthToChange = symbolKey!!.mWidth - mParams.mDefaultKeyWidth
-            symbolKey.mWidth -= widthToChange
-            spaceKey.mWidth += widthToChange
-        }
-        val actionKey = row.firstOrNull { it.mBackgroundType == Key.BACKGROUND_TYPE_ACTION }
-        val actionKeyWidth = actionKey?.mWidth ?: 0f
-        if (actionKeyWidth > mParams.mDefaultKeyWidth * 1.1f) { // allow it to stay a little wider
-            val widthToChange = actionKey!!.mWidth - mParams.mDefaultKeyWidth * 1.1f
-            actionKey.mWidth -= widthToChange
-            spaceKey.mWidth += widthToChange
         }
     }
 

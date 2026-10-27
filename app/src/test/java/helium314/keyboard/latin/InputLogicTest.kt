@@ -205,36 +205,7 @@ class InputLogicTest {
         assertEquals("", composingText)
     }
 
-    @Test fun autospace() {
-        setText("hello")
-        input('.')
-        input('a')
-        assertEquals("hello.a", textBeforeCursor)
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
-        setText("hello")
-        input('.')
-        input('a')
-        assertEquals("hello. a", textBeforeCursor)
-    }
-
-    @Test fun autospaceButWithTextAfter() {
-        setText("hello there")
-        setCursorPosition(5) // after hello
-        input('.')
-        input('a')
-        assertEquals("hello.a", textBeforeCursor)
-        assertEquals("hello.a there", text)
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
-        setText("hello there")
-        setCursorPosition(5) // after hello
-        input('.')
-        input('a')
-        assertEquals("hello. a", textBeforeCursor)
-        assertEquals("hello. a there", text)
-    }
-
     @Test fun noAutospaceInUrlField() {
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
         chainInput("example.net")
         assertEquals("example. net", text)
         lastAddedWord = ""
@@ -255,28 +226,6 @@ class InputLogicTest {
         assertEquals("example.", text)
     }
 
-    @Test fun noAutospaceForDetectedUrl() { // "light" version, should work without url detection
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
-        chainInput("http://example.net")
-        assertEquals("http://example.net", text)
-        assertEquals("http", lastAddedWord)
-        assertEquals("example.net", composingText)
-    }
-
-    @Test fun noAutospaceForDetectedEmail() {
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
-        chainInput("mail@example.com")
-        assertEquals("mail@example.com", text)
-        assertEquals("mail@example", lastAddedWord) // todo: do we want this? not really nice, but don't want to be too aggressive with URL detection disabled
-        assertEquals("com", composingText) // todo: maybe this should still see the whole address as a single word? or don't be too aggressive?
-        setText("")
-        lastAddedWord = ""
-        latinIME.prefs().edit { putBoolean(Settings.PREF_URL_DETECTION, true) }
-        chainInput("mail@example.com")
-        assertEquals("", lastAddedWord)
-        assertEquals("mail@example.com", composingText)
-    }
-
     @Test fun urlDetectionThings() {
         latinIME.prefs().edit { putBoolean(Settings.PREF_URL_DETECTION, true) }
         chainInput("...h")
@@ -294,22 +243,12 @@ class InputLogicTest {
         assertEquals("bla.c", composingText)
         reset()
         latinIME.prefs().edit { putBoolean(Settings.PREF_URL_DETECTION, true) }
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
-        latinIME.prefs().edit { putBoolean(Settings.PREF_SHIFT_REMOVES_AUTOSPACE, true) }
         input("bla")
         input('.')
         functionalKeyPress(KeyCode.SHIFT) // should remove the phantom space (in addition to normal effect)
         input('c')
         assertEquals("bla.c", text)
         assertEquals("bla.c", composingText)
-    }
-
-    @Test fun stripSeparatorsBeforeAddingToHistoryWithURLDetection() {
-        latinIME.prefs().edit { putBoolean(Settings.PREF_URL_DETECTION, true) }
-        chainInput("example.com.")
-        assertEquals("example.com.", composingText)
-        input(' ')
-        assertEquals("example.com", lastAddedWord)
     }
 
     @Test fun dontSelectConsecutiveSeparatorsWithURLDetection() {
@@ -461,7 +400,6 @@ class InputLogicTest {
 
     @Test fun `don't accidentally detect some other text fields as URI`() {
         // see comment in InputLogic.textBeforeCursorMayBeUrlOrSimilar
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
         setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE)
         chainInput("Hey,why")
         assertEquals("Hey, why", text)
@@ -511,22 +449,6 @@ class InputLogicTest {
         assertEquals("c", composingText)
     }
 
-    @Test fun `emoji is added to dictionary`() {
-        // check both text and codepoint input
-        chainInput("hello ")
-        input(0x1F36D)
-        assertEquals(StringUtils.newSingleCodePointString(0x1F36D), lastAddedWord)
-        reset()
-        chainInput("hello ")
-        input("🤗")
-        assertEquals("\uD83E\uDD17", lastAddedWord)
-
-        reset()
-        chainInput("hello ")
-        input("why 🤗 ") // not added because it's not only emoji (input can come from pasting)
-        assertEquals("hello", lastAddedWord)
-    }
-
     @Test fun `emoji uses phantom space`() {
         // check both text and codepoint input
         pickSuggestion("hi")
@@ -574,19 +496,16 @@ class InputLogicTest {
         assertEquals("\"\"\"", text)
 
         reset()
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
         chainInput("\"\"\"")
         assertEquals("\"\"\"", text)
     }
 
     @Test fun `autospace still happens after "`() {
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
         chainInput("\"hello\"you")
         assertEquals("\"hello\" you", text)
     }
 
     @Test fun `autospace still happens after " if next word is in quotes`() {
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
         chainInput("\"hello\"\"you\"")
         assertEquals("\"hello\" \"you\"", text)
     }
@@ -600,13 +519,11 @@ class InputLogicTest {
     }
 
     @Test fun `autospace still happens after " if nex word is in " and after comma`() {
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
         chainInput("\"hello\",\"you\"")
         assertEquals("\"hello\", \"you\"", text)
     }
 
     @Test fun `autospace in json editor`() {
-        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION, true) }
         chainInput("{\"label\":\"")
         assertEquals("{\"label\": \"", text)
         input('c')
@@ -645,33 +562,6 @@ class InputLogicTest {
         chainInput("\uD83E\uDEC6\uD83E\uDEC6\uD83E\uDEC6")
         functionalKeyPress(KeyCode.DELETE)
         assertEquals("\uD83E\uDEC6\uD83E\uDEC6", text)
-    }
-
-    @Test fun `revert autocorrect on delete`() {
-        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
-        chainInput("hullo")
-        getAutocorrectedWithSpaceAfter("hello", "hullo")
-        assertEquals("hello ", text)
-        functionalKeyPress(KeyCode.DELETE)
-        assertEquals("hullo", text)
-
-        reset()
-        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
-        latinIME.prefs().edit { putBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT, false) }
-        chainInput("hullo")
-        getAutocorrectedWithSpaceAfter("hello", "hullo")
-        functionalKeyPress(KeyCode.DELETE)
-        assertEquals("hello", text)
-    }
-
-    @Test fun `remove glide typing word on delete`() {
-        glideTypingInput("hello")
-        assertEquals("hello", text)
-        functionalKeyPress(KeyCode.DELETE)
-        assertEquals("", text)
-
-        // todo: now we want some way to disable delete-all on backspace, either per setting or something else
-        //  need to avoid getting into the mWordComposer.isBatchMode() part of handleBackspaceEvent
     }
 
     @Test fun timestamp() {
@@ -870,12 +760,6 @@ class InputLogicTest {
         checkConnectionConsistency()
     }
 
-    private fun glideTypingInput(word: String) {
-        val info = SuggestedWordInfo(word, "", 0, 0, null, 0, 0)
-        val sw = SuggestedWords(ArrayList(listOf(info)), null, info, true, false, false, 0, 0)
-        latinIME.mInputLogic.onUpdateTailBatchInputCompleted(settingsValues, sw, KeyboardSwitcher.getInstance())
-    }
-
     private fun checkConnectionConsistency() {
         // RichInputConnection only has composing text up to cursor, but InputConnection has full composing text
         val expectedConnectionComposingText = if (composingStart == -1 || composingEnd == -1) ""
@@ -957,9 +841,6 @@ class ShadowKeyboardSwitcher {
     @Implementation
     // only affects view
     fun setKeyboard(keyboardId: Int, toggleState: KeyboardSwitcher.KeyboardSwitchState) = Unit
-    @Implementation
-    // only affects view
-    fun setOneHandedModeEnabled(enabled: Boolean, force: Boolean) = Unit
     @Implementation
     fun getCurrentKeyboardScript() = currentScript
 }

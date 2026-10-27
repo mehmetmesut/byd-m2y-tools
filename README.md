@@ -10,7 +10,7 @@
   <img alt="licence" src="https://img.shields.io/github/license/mehmetmesut/byd-m2y-board?color=6250d6">
 </p>
 <p align="center">
-  <a href="https://github.com/mehmetmesut/byd-m2y-board/releases/download/1.25.07.68.0/M2YBoard_1.25.07.68.0.apk"><b>⬇ Download APK (4.5 MB)</b></a> ·
+  <a href="https://github.com/mehmetmesut/byd-m2y-board/releases/download/1.25.07.68.1/M2YBoard_1.25.07.68.1.apk"><b>⬇ Download APK (4.3 MB)</b></a> ·
   <a href="https://byd.mehmetmesut.com">byd.mehmetmesut.com</a> ·
   <a href="https://github.com/mehmetmesut/byd-m2y">⭐ All M2Y apps for BYD</a>
 </p>
@@ -26,38 +26,37 @@ I built M2Y Board first for **my own BYD SEAL U DM-i** because the store apps di
 ### Highlights
 
 - **Turkish Q out of the box** – enabled and selected on a fresh install whatever the system language is; Russian (Cyrillic) layout and dictionary are bundled too.
-- **100 % offline** – the app declares no internet permission and nothing it stores is backed up.
-- **Made for 1920×1080** – keyboard height 82 % so the input field stays visible, number row always on.
-- **Clipboard one tap away** – the clipboard button is permanently pinned on the toolbar.
-- **Small** – 4.5 MB APK, arm64 native libraries only.
-- **No data collection** – the gesture-data collection of the upstream keyboard is removed completely.
+- **100 % offline** – no internet permission, nothing is backed up, no learning: what you type is never stored.
+- **Compact, centred keyboard** – uses the middle 55 % of the 1920×1080 screen; the sides stay transparent and touches there go to the app below.
+- **Your own words one tap away** – a toolbar key adds the selected text or the word before the cursor (name, e-mail…) to the personal dictionary.
+- **Small** – 4.3 MB APK, arm64 native libraries only.
+- **No settings to fiddle with** – only languages, personal dictionary and about remain; everything else is fixed to tuned values.
 
 ### Features
 
-- Turkish Q layout (ı, ğ, ü, ş, ö, ç, ₺) with Turkish dictionary, suggestions and spell checker (about 1.2 MB dictionary).
-- Russian (Cyrillic) layout with Russian dictionary (about 2.2 MB); switch it on in the keyboard's language settings.
-- Number row on the alphabet and symbol layouts, with localized digits.
-- Keyboard height set to 82 % of the default (tuned on the 1920×1080 / 240 dpi screen).
-- Clipboard history with a button that is always visible on the toolbar; image and file copies are not written to disk. Entries are kept for 10 minutes by default.
-- Emoji keyboard with search, reachable from the bottom row (long-press the comma key) and from the toolbar; a fixed emoji key can be turned on in the settings but is off by default.
-- Toolbar with undo, redo, select word, copy, paste and cursor keys.
-- Timestamp key format defaults to `dd-MM-yyyy HH:mm:ss` (day first).
-- No microphone key (the head unit has no voice input service for it).
-- Simplified settings: the advanced, layout, dictionary and gesture screens are removed and those options keep their tuned defaults.
-- Defaults that save CPU: gesture (swipe) typing off and no gesture library shipped, emoji suggestions off, key sound and vibration off.
-- Based on HeliBoard: autocorrect, next-word suggestions, long-press popup keys, themes, one-handed mode and the rest of the upstream editing features stay available.
+- Turkish Q layout (ı, ğ, ü, ş, ö, ç, ₺) with Turkish dictionary and suggestions (about 1.2 MB dictionary).
+- Russian (Cyrillic) layout with Russian dictionary (about 2.2 MB); switch it on in *Languages & layouts*.
+- Number row always on; keyboard height 82 % of the default; equal gaps (half a key gap) around the outer keys.
+- Bottom row: `?123` · `@` · space · `.` · action · hide keyboard. Long-press `.` for punctuation (comma is pre-selected, `*` is in the list).
+- `?123` opens symbols, number pad and emoji as three tabs (`?123` · `#+=` · 😀) on their bottom row.
+- E-mail domain suggestions after `@` (gmail.com, hotmail.com, outlook.com, icloud.com, yahoo.com, yandex.com).
+- Personal dictionary with shortcuts for fixed words such as your name or e-mail; add words from the toolbar or in the settings.
+- Toolbar: expand key with settings, clipboard, emoji, undo, redo, select word, copy, paste and cursor keys; add-word and clipboard keys are always visible next to the suggestions; swipe down on the toolbar to hide the keyboard.
+- Clipboard history kept 10 minutes, pinned clips first; image and file copies are not written to disk.
+- Next-word suggestions and fixed punctuation suggestions (`-` `@` `_`) on an empty strip.
+- Removed to save resources and protect privacy: autocorrect, learning from typing, spell checker service, gesture typing and gesture-data collection, key sound and vibration, themes, one-handed and floating modes, in-app log and crash reports.
 
 ### Built for the head unit
 
 | Head unit fact | Design decision |
 |---|---|
-| Android 10 (API 29), arm64-v8a, no Google services | No Google or Play dependency, no internet permission; the release APK carries arm64 native libraries only (4.5 MB) |
-| 1920×1080 landscape touch screen, 240 dpi | Keyboard height 82 % so the text field stays visible, number row always on |
+| Android 10 (API 29), arm64-v8a, no Google services | No Google or Play dependency, no internet permission; the release APK carries arm64 native libraries only (4.3 MB) |
+| 1920×1080 landscape touch screen, 240 dpi | Keyboard centred in 55 % of the width, transparent sides, height 82 %, number row always on |
 | Turkish owner, occasional Russian | **Turkish Q** is enabled and selected on a fresh install regardless of the system language; Russian layout and dictionary bundled |
-| Qualcomm SM6125, must never stutter | Gesture typing off with no gesture library shipped, emoji suggestions off (no extra dictionary lookup per word), no clipboard file copies, no sound or vibration by default |
-| Copy and paste while parked | Clipboard button always visible on the toolbar; emoji one long-press away on the bottom row |
+| Qualcomm SM6125, must never stutter | No learning, autocorrect, spell checker, gesture typing, key sound or vibration; emoji suggestions off; no clipboard file copies |
+| Copy and paste while parked | Clipboard and add-word keys always visible on the toolbar |
 | No voice input service | No microphone key |
-| Privacy and a quiet settings screen | Gesture-data collection removed (active and background collection, review and share screens, its database table); advanced, layout, dictionary and gesture screens removed |
+| Privacy and a quiet settings screen | No data collection, no logs on disk; settings reduced to languages, personal dictionary and about |
 
 ### Install
 
@@ -65,7 +64,7 @@ On a head unit with wireless ADB enabled:
 
 ```
 adb connect <car-ip>:5555
-adb install -r M2YBoard_1.25.07.68.0.apk
+adb install -r M2YBoard_1.25.07.68.1.apk
 adb shell ime enable com.m2y.board/helium314.keyboard.latin.LatinIME
 adb shell ime set com.m2y.board/helium314.keyboard.latin.LatinIME
 ```
@@ -85,9 +84,8 @@ The app has **no internet permission** and `allowBackup` is off, so typed words 
 | Permission | Why |
 |---|---|
 | `READ_USER_DICTIONARY` / `WRITE_USER_DICTIONARY` | Read and write the system user dictionary (your own saved words) |
-| `READ_CONTACTS` | Only for the optional contact-name suggestions; the option is **off by default** |
 | `RECEIVE_BOOT_COMPLETED` | Lets the keyboard get ready after boot, after an app update and after a language change |
-| `VIBRATE` | Optional key vibration; **off by default** |
+| `VIBRATE` | Declared by the upstream keyboard; key vibration is **off** and has no setting |
 
 Never collected: no analytics, no crash reporting, no advertising, no tracking, no gesture data, no account.
 
@@ -125,38 +123,37 @@ M2Y Board'u önce **kendi BYD SEAL U DM-i aracım** için yaptım; çünkü mağ
 ### Öne çıkanlar
 
 - **Kutudan çıktığı gibi Türkçe Q** – temiz kurulumda sistem dili ne olursa olsun açık ve seçili; Rusça (Kiril) düzen ve sözlük de pakette hazır.
-- **%100 çevrim dışı** – uygulama internet izni istemez, sakladığı hiçbir şey yedeklenmez.
-- **1920×1080 için ayarlı** – klavye yüksekliği %82 (giriş alanı görünür kalır), rakam satırı her zaman açık.
-- **Pano tek dokunuşla** – pano düğmesi araç çubuğunda kalıcı olarak sabit.
-- **Küçük** – 4,5 MB APK, yalnızca arm64 yerel kitaplıkları.
-- **Veri toplama yok** – üst proje klavyesindeki hareket verisi toplama özelliği tamamen kaldırıldı.
+- **%100 çevrim dışı** – internet izni yok, hiçbir şey yedeklenmez, öğrenme yok: yazdıklarınız hiçbir yerde saklanmaz.
+- **Ortada, derli toplu klavye** – 1920×1080 ekranın ortadaki %55'ini kullanır; yanlar şeffaftır, oraya dokunuş alttaki uygulamaya gider.
+- **Kendi kelimeleriniz tek dokunuşta** – araç çubuğundaki tuş seçili metni ya da imlecin solundaki kelimeyi (ad, e-posta…) kişisel sözlüğe ekler.
+- **Küçük** – 4,3 MB APK, yalnızca arm64 yerel kitaplıkları.
+- **Uğraştıran ayar yok** – yalnız diller, kişisel sözlük ve hakkında kaldı; geri kalan her şey ayarlanmış değerlerde sabit.
 
 ### Özellikler
 
-- Türkçe Q düzeni (ı, ğ, ü, ş, ö, ç, ₺), Türkçe sözlük, öneriler ve yazım denetimi (sözlük yaklaşık 1,2 MB).
-- Rusça (Kiril) düzen ve Rusça sözlük (yaklaşık 2,2 MB); klavyenin dil ayarlarından açılır.
-- Alfabe ve simge düzenlerinde rakam satırı, yerelleştirilmiş rakamlarla.
-- Klavye yüksekliği varsayılanın %82'si (1920×1080 / 240 dpi ekranda ayarlandı).
-- Pano geçmişi; düğmesi araç çubuğunda her zaman görünür. Görsel ve dosya kopyaları diske yazılmaz. Kayıtlar varsayılan olarak 10 dakika tutulur.
-- Aramalı emoji klavyesi; alt satırdan (virgül tuşuna uzun basarak) ve araç çubuğundan açılır. Sabit emoji tuşu ayarlardan açılabilir, varsayılan olarak kapalıdır.
-- Geri al, yinele, sözcük seç, kopyala, yapıştır ve imleç tuşlarını içeren araç çubuğu.
-- Zaman damgası biçimi varsayılan olarak `dd-MM-yyyy HH:mm:ss` (önce gün).
-- Mikrofon tuşu yok (başlık ünitesinde bunun için bir sesli giriş hizmeti bulunmuyor).
-- Sadeleştirilmiş ayarlar: gelişmiş, düzen, sözlük ve hareket ekranları kaldırıldı; bu seçenekler ayarlanmış varsayılanlarını korur.
-- İşlemciden tasarruf eden varsayılanlar: kaydırarak yazma kapalı ve hareket kitaplığı pakete eklenmedi, emoji önerisi kapalı, tuş sesi ve titreşim kapalı.
-- HeliBoard tabanlıdır: otomatik düzeltme, sonraki sözcük önerisi, uzun basış açılır tuşları, temalar, tek elle kullanım modu ve üst projenin diğer düzenleme özellikleri kullanılabilir.
+- Türkçe Q düzeni (ı, ğ, ü, ş, ö, ç, ₺), Türkçe sözlük ve öneriler (sözlük yaklaşık 1,2 MB).
+- Rusça (Kiril) düzen ve Rusça sözlük (yaklaşık 2,2 MB); *Diller ve Düzenler*'den açılır.
+- Rakam satırı her zaman açık; klavye yüksekliği varsayılanın %82'si; dıştaki tuşların çevresinde eşit boşluk (tuş arası boşluğun yarısı).
+- Alt satır: `?123` · `@` · boşluk · `.` · eylem · klavyeyi gizle. `.` tuşuna uzun basınca noktalama listesi (virgül hazır seçili, `*` listede).
+- `?123` sembolleri, sayı tuş takımını ve emojiyi alt satırlarında üç sekme olarak açar (`?123` · `#+=` · 😀).
+- `@` sonrasında e-posta alan adı önerileri (gmail.com, hotmail.com, outlook.com, icloud.com, yahoo.com, yandex.com).
+- Adınız, e-postanız gibi sabit bilgiler için kısayollu kişisel sözlük; kelimeyi araç çubuğundan ya da ayarlardan ekleyin.
+- Araç çubuğu: açma tuşunda ayarlar, pano, emoji, geri al, yinele, kelime seç, kopyala, yapıştır ve imleç tuşları; kelime ekle ve pano tuşları önerilerin yanında hep görünür; araç çubuğunda aşağı kaydırınca klavye gizlenir.
+- Pano geçmişi 10 dakika tutulur, sabitlenenler önde; görsel ve dosya kopyaları diske yazılmaz.
+- Sonraki kelime önerileri ve boş şeritte sabit noktalama önerileri (`-` `@` `_`).
+- Kaynak ve gizlilik için kaldırılanlar: otomatik düzeltme, yazdıklarından öğrenme, yazım denetimi hizmeti, kaydırarak yazma ve hareket verisi toplama, tuş sesi ve titreşim, temalar, tek el ve yüzen klavye, uygulama içi günlük ve çökme raporları.
 
 ### Başlık ünitesi için tasarım
 
 | Başlık ünitesi gerçeği | Tasarım kararı |
 |---|---|
-| Android 10 (API 29), arm64-v8a, Google hizmeti yok | Google ya da Play bağımlılığı yok, internet izni yok; sürüm APK'sı yalnızca arm64 yerel kitaplıkları içerir (4,5 MB) |
-| 1920×1080 yatay dokunmatik ekran, 240 dpi | Klavye yüksekliği %82 (metin alanı görünür kalır), rakam satırı her zaman açık |
+| Android 10 (API 29), arm64-v8a, Google hizmeti yok | Google ya da Play bağımlılığı yok, internet izni yok; sürüm APK'sı yalnızca arm64 yerel kitaplıkları içerir (4,3 MB) |
+| 1920×1080 yatay dokunmatik ekran, 240 dpi | Klavye genişliğin %55'inde ortalı, yanlar şeffaf, yükseklik %82, rakam satırı her zaman açık |
 | Türkçe konuşan sahip, ara sıra Rusça | **Türkçe Q** temiz kurulumda sistem dilinden bağımsız olarak açık ve seçili; Rusça düzen ve sözlük pakette |
-| Qualcomm SM6125, asla takılmamalı | Kaydırarak yazma kapalı ve hareket kitaplığı yok, emoji önerisi kapalı (sözcük başına ek sözlük sorgusu yok), pano dosya kopyası yok, varsayılan olarak ses ve titreşim yok |
-| Park hâlinde kopyala-yapıştır | Pano düğmesi araç çubuğunda her zaman görünür; emoji alt satırda bir uzun basış uzaklığında |
+| Qualcomm SM6125, asla takılmamalı | Öğrenme, otomatik düzeltme, yazım denetimi, kaydırarak yazma, tuş sesi ve titreşim yok; emoji önerisi kapalı; pano dosya kopyası yok |
+| Park hâlinde kopyala-yapıştır | Pano ve kelime ekle tuşları araç çubuğunda her zaman görünür |
 | Sesli giriş hizmeti yok | Mikrofon tuşu yok |
-| Gizlilik ve sakin bir ayar ekranı | Hareket verisi toplama kaldırıldı (etkin ve arka planda toplama, inceleme ve paylaşım ekranları, veritabanı tablosu); gelişmiş, düzen, sözlük ve hareket ekranları kaldırıldı |
+| Gizlilik ve sakin bir ayar ekranı | Veri toplama yok, diske günlük yok; ayarlar diller, kişisel sözlük ve hakkında ile sınırlı |
 
 ### Kurulum
 
@@ -164,7 +161,7 @@ Kablosuz ADB'nin açık olduğu bir başlık ünitesinde:
 
 ```
 adb connect <araç-ip>:5555
-adb install -r M2YBoard_1.25.07.68.0.apk
+adb install -r M2YBoard_1.25.07.68.1.apk
 adb shell ime enable com.m2y.board/helium314.keyboard.latin.LatinIME
 adb shell ime set com.m2y.board/helium314.keyboard.latin.LatinIME
 ```
@@ -184,9 +181,8 @@ Uygulamada **internet izni yoktur** ve `allowBackup` kapalıdır; yazdığınız
 | İzin | Neden |
 |---|---|
 | `READ_USER_DICTIONARY` / `WRITE_USER_DICTIONARY` | Sistem kullanıcı sözlüğünü (kendi kaydettiğiniz sözcükleri) okumak ve yazmak |
-| `READ_CONTACTS` | Yalnızca isteğe bağlı kişi adı önerileri için; seçenek **varsayılan olarak kapalıdır** |
 | `RECEIVE_BOOT_COMPLETED` | Klavyenin açılıştan, uygulama güncellemesinden ve dil değişikliğinden sonra hazır olmasını sağlar |
-| `VIBRATE` | İsteğe bağlı tuş titreşimi; **varsayılan olarak kapalıdır** |
+| `VIBRATE` | Üst projeden kalan bildirim; tuş titreşimi **kapalıdır** ve ayarı yoktur |
 
 Hiçbir zaman toplanmaz: analitik, çökme raporu, reklam, izleme, hareket verisi ve hesap yoktur.
 
@@ -224,38 +220,37 @@ M2Y Board я сделал сначала для **собственного BYD S
 ### Главное
 
 - **Турецкая раскладка Q из коробки** – при чистой установке включена и выбрана независимо от языка системы; русская (кириллическая) раскладка и словарь тоже входят в комплект.
-- **100 % офлайн** – у приложения нет разрешения на доступ в интернет, ничто из сохранённого не попадает в резервные копии.
-- **Настроена под 1920×1080** – высота клавиатуры 82 %, поле ввода остаётся видимым, цифровой ряд всегда включён.
-- **Буфер обмена в одно касание** – кнопка буфера постоянно закреплена на панели инструментов.
-- **Компактность** – APK 4,5 МБ, только нативные библиотеки arm64.
-- **Никакого сбора данных** – сбор данных жестов из исходной клавиатуры полностью удалён.
+- **100 % офлайн** – нет разрешения на интернет, ничего не попадает в резервные копии, нет обучения: набранный текст нигде не сохраняется.
+- **Компактная клавиатура по центру** – занимает средние 55 % экрана 1920×1080; края прозрачные, касания там попадают в приложение под клавиатурой.
+- **Свои слова в одно касание** – клавиша на панели добавляет выделенный текст или слово перед курсором (имя, e-mail…) в личный словарь.
+- **Компактность** – APK 4,3 МБ, только нативные библиотеки arm64.
+- **Никаких лишних настроек** – остались только языки, личный словарь и «О программе»; всё остальное зафиксировано на подобранных значениях.
 
 ### Возможности
 
-- Турецкая раскладка Q (ı, ğ, ü, ş, ö, ç, ₺), турецкий словарь, подсказки и проверка орфографии (словарь около 1,2 МБ).
-- Русская (кириллическая) раскладка и русский словарь (около 2,2 МБ); включается в языковых настройках клавиатуры.
-- Цифровой ряд на буквенной и символьной раскладках, с локализованными цифрами.
-- Высота клавиатуры — 82 % от стандартной (подобрана на экране 1920×1080 / 240 dpi).
-- История буфера обмена; кнопка всегда видна на панели инструментов. Изображения и файлы на диск не записываются. Записи хранятся по умолчанию 10 минут.
-- Клавиатура эмодзи с поиском; открывается из нижнего ряда (долгое нажатие на запятую) и с панели инструментов. Постоянную клавишу эмодзи можно включить в настройках, по умолчанию она выключена.
-- Панель инструментов: отмена, повтор, выделение слова, копирование, вставка и клавиши курсора.
-- Формат метки времени по умолчанию — `dd-MM-yyyy HH:mm:ss` (сначала день).
-- Клавиши микрофона нет (в головном устройстве нет службы голосового ввода для неё).
-- Упрощённые настройки: расширенные разделы, раскладок, словарей и жестов удалены, эти параметры сохраняют подобранные значения по умолчанию.
-- Значения по умолчанию, экономящие процессор: ввод жестами выключен и библиотека жестов не входит в комплект, подсказки эмодзи выключены, звук и вибрация клавиш выключены.
-- Основано на HeliBoard: автокоррекция, подсказка следующего слова, всплывающие клавиши по долгому нажатию, темы, режим управления одной рукой и остальные функции редактирования исходного проекта доступны.
+- Турецкая раскладка Q (ı, ğ, ü, ş, ö, ç, ₺), турецкий словарь и подсказки (словарь около 1,2 МБ).
+- Русская (кириллическая) раскладка и русский словарь (около 2,2 МБ); включается в разделе *Языки и раскладки*.
+- Цифровой ряд всегда включён; высота клавиатуры 82 % от стандартной; одинаковые отступы (половина промежутка между клавишами) вокруг крайних клавиш.
+- Нижний ряд: `?123` · `@` · пробел · `.` · действие · скрыть клавиатуру. Долгое нажатие на `.` — список знаков препинания (запятая выбрана сразу, `*` в списке).
+- `?123` открывает символы, цифровую панель и эмодзи как три вкладки (`?123` · `#+=` · 😀) в их нижнем ряду.
+- Подсказки доменов после `@` (gmail.com, hotmail.com, outlook.com, icloud.com, yahoo.com, yandex.com).
+- Личный словарь с сокращениями для постоянных слов вроде имени или e-mail; слова добавляются с панели инструментов или в настройках.
+- Панель инструментов: по кнопке раскрытия — настройки, буфер обмена, эмодзи, отмена, повтор, выделение слова, копирование, вставка и клавиши курсора; клавиши «добавить слово» и буфера всегда видны рядом с подсказками; свайп вниз по панели скрывает клавиатуру.
+- История буфера обмена хранится 10 минут, закреплённые записи первыми; изображения и файлы на диск не записываются.
+- Подсказки следующего слова и постоянные знаки препинания (`-` `@` `_`) на пустой строке подсказок.
+- Удалено ради экономии ресурсов и конфиденциальности: автокоррекция, обучение на вводе, служба проверки орфографии, ввод жестами и сбор данных жестов, звук и вибрация клавиш, темы, режимы одной руки и плавающей клавиатуры, журнал в приложении и отчёты о сбоях.
 
 ### Создано для головного устройства
 
 | Особенность головного устройства | Решение |
 |---|---|
-| Android 10 (API 29), arm64-v8a, нет сервисов Google | Нет зависимостей от Google и Play, нет разрешения на интернет; релизный APK содержит только нативные библиотеки arm64 (4,5 МБ) |
-| Горизонтальный сенсорный экран 1920×1080, 240 dpi | Высота клавиатуры 82 %, текстовое поле остаётся видимым, цифровой ряд всегда включён |
+| Android 10 (API 29), arm64-v8a, нет сервисов Google | Нет зависимостей от Google и Play, нет разрешения на интернет; релизный APK содержит только нативные библиотеки arm64 (4,3 МБ) |
+| Горизонтальный сенсорный экран 1920×1080, 240 dpi | Клавиатура по центру на 55 % ширины, прозрачные края, высота 82 %, цифровой ряд всегда включён |
 | Владелец говорит по-турецки, иногда по-русски | **Турецкая раскладка Q** включена и выбрана при чистой установке независимо от языка системы; русская раскладка и словарь в комплекте |
-| Qualcomm SM6125, никаких подтормаживаний | Ввод жестами выключен, библиотеки жестов нет, подсказки эмодзи выключены (нет лишнего обращения к словарю на каждое слово), нет файловых копий буфера, по умолчанию без звука и вибрации |
-| Копирование и вставка на стоянке | Кнопка буфера всегда видна на панели инструментов; эмодзи — одно долгое нажатие в нижнем ряду |
+| Qualcomm SM6125, никаких подтормаживаний | Нет обучения, автокоррекции, проверки орфографии, ввода жестами, звука и вибрации клавиш; подсказки эмодзи выключены; нет файловых копий буфера |
+| Копирование и вставка на стоянке | Клавиши буфера и «добавить слово» всегда видны на панели инструментов |
 | Нет службы голосового ввода | Нет клавиши микрофона |
-| Конфиденциальность и спокойный экран настроек | Сбор данных жестов удалён (активный и фоновый сбор, экраны просмотра и отправки, таблица в базе данных); разделы расширенных настроек, раскладок, словарей и жестов удалены |
+| Конфиденциальность и спокойный экран настроек | Никакого сбора данных, никаких журналов на диске; настройки сведены к языкам, личному словарю и «О программе» |
 
 ### Установка
 
@@ -263,7 +258,7 @@ M2Y Board я сделал сначала для **собственного BYD S
 
 ```
 adb connect <ip-автомобиля>:5555
-adb install -r M2YBoard_1.25.07.68.0.apk
+adb install -r M2YBoard_1.25.07.68.1.apk
 adb shell ime enable com.m2y.board/helium314.keyboard.latin.LatinIME
 adb shell ime set com.m2y.board/helium314.keyboard.latin.LatinIME
 ```
@@ -283,9 +278,8 @@ adb shell ime set com.m2y.board/helium314.keyboard.latin.LatinIME
 | Разрешение | Зачем |
 |---|---|
 | `READ_USER_DICTIONARY` / `WRITE_USER_DICTIONARY` | Чтение и запись системного пользовательского словаря (ваших сохранённых слов) |
-| `READ_CONTACTS` | Только для необязательных подсказок имён из контактов; параметр **по умолчанию выключен** |
 | `RECEIVE_BOOT_COMPLETED` | Позволяет клавиатуре подготовиться после загрузки, после обновления приложения и после смены языка |
-| `VIBRATE` | Необязательная вибрация клавиш; **по умолчанию выключена** |
+| `VIBRATE` | Унаследовано от исходной клавиатуры; вибрация клавиш **выключена** и не настраивается |
 
 Не собирается никогда: нет аналитики, отчётов о сбоях, рекламы, слежки, данных жестов и учётных записей.
 

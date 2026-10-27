@@ -45,7 +45,6 @@ import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Colors;
 import helium314.keyboard.latin.settings.Settings;
-import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.utils.ViewLayoutUtils;
 
@@ -223,20 +222,13 @@ final class SuggestionStripLayoutHelper {
      */
     private int getPositionInSuggestionStrip(final int indexInSuggestedWords,
             final SuggestedWords suggestedWords) {
-        final SettingsValues settingsValues = Settings.getValues();
-        final boolean shouldOmitTypedWord = shouldOmitTypedWord(suggestedWords.mInputStyle,
-                settingsValues.mGestureFloatingPreviewTextEnabled, true);
+        final boolean shouldOmitTypedWord = shouldOmitTypedWord(suggestedWords.mInputStyle);
         return getPositionInSuggestionStrip(indexInSuggestedWords, suggestedWords.mWillAutoCorrect,
                 shouldOmitTypedWord, mCenterPositionInStrip, mTypedWordPositionWhenAutocorrect);
     }
 
-    static boolean shouldOmitTypedWord(final int inputStyle,
-            final boolean gestureFloatingPreviewTextEnabled,
-            final boolean shouldShowUiToAcceptTypedWord) {
-        final boolean omitTypedWord = (inputStyle == SuggestedWords.INPUT_STYLE_TYPING)
-                || (inputStyle == SuggestedWords.INPUT_STYLE_TAIL_BATCH)
-                || (inputStyle == SuggestedWords.INPUT_STYLE_UPDATE_BATCH && gestureFloatingPreviewTextEnabled);
-        return shouldShowUiToAcceptTypedWord && omitTypedWord;
+    static boolean shouldOmitTypedWord(final int inputStyle) {
+        return inputStyle == SuggestedWords.INPUT_STYLE_TYPING;
     }
 
     static int getPositionInSuggestionStrip(final int indexInSuggestedWords,
