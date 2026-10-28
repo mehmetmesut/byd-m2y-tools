@@ -125,36 +125,6 @@ data class EqSettings(
         /** Reference profile: every band 0 dB and no extra processing; the factory Infinity DSP stays as tuned. */
         const val REFERENCE_PRESET = "BYD"
 
-        /**
-         * The sound of Flat Equalizer 6.3.5.8 (com.jazibkhan.equalizer, DynamicsProcessing mode; read from its APK) in our
-         * chain. Flat gives slider k a postEq band whose cutoff is the slider's own label (31,25 … 16k, 125 → 145 Hz), so it
-         * lifts the octave *below* the label; bass is preEq band 0 up to 80 Hz at 15 dB × %, loudness the limiter post-gain
-         * at 20 dB × %, no input gain. At its 10 ms frame (512-point FFT, 93,75 Hz bins at 48 kHz) that is one gain per bin,
-         * and overlap-add blends neighbouring bins (modelled linear in dB). That response is sampled at the FINE centres and
-         * the part our own bass band adds (centres below bassHz + ½ bin) is taken out of the bands. Our loudness is input gain
-         * and there is no limiter, so with STRONG headroom the level matches Flat and, like Flat, loud peaks clip.
-         */
-        fun fromFlat(sliders: List<Float>, bassPercent: Float, loudnessPercent: Float): EqSettings {
-            require(sliders.size == FLAT_CUTOFFS.size) { "Flat has ${FLAT_CUTOFFS.size} sliders" }
-            val bassDb = FLAT_BASS_MAX_DB * bassPercent / 100f
-            fun stopBin(hz: Float) = (hz / FLAT_BIN_HZ).roundToInt() // DPFrequency: a band ends at round(cutoff / bin)
-            fun binDb(bin: Int): Float {
-                val band = FLAT_CUTOFFS.indexOfFirst { bin <= stopBin(it) } // above the last cutoff: unchanged
-                return (if (band < 0) 0f else sliders[band]) + if (bin <= stopBin(BASS_DEFAULT_HZ)) bassDb else 0f
-            }
-            val gains = FINE.map { hz ->
-                val x = hz / FLAT_BIN_HZ
-                val lo = x.toInt()
-                val flat = binDb(lo) + (x - lo) * (binDb(lo + 1) - binDb(lo))
-                val db = flat - if (hz < BASS_DEFAULT_HZ + BIN_HZ / 2) bassDb else 0f
-                (db / STEP_DB).roundToInt() * STEP_DB
-            }
-            return EqSettings(gains, bassDb, FLAT_LOUDNESS_MAX_DB * loudnessPercent / 100f, headroom = Headroom.STRONG)
-        }
-        private const val FLAT_BIN_HZ = 48000f / 512
-        private const val FLAT_BASS_MAX_DB = 15f
-        private const val FLAT_LOUDNESS_MAX_DB = 20f
-
         /** Converts a 30-band 1/3-octave curve (old storage, preset tables) to the FINE layout. */
         fun fromLegacyThird(gains: List<Float>): List<Float> {
             require(gains.size == LEGACY_THIRD.size) { "legacy curve needs ${LEGACY_THIRD.size} bands" }
@@ -163,13 +133,14 @@ data class EqSettings(
 
         // Pop/Rock/Rap/Klasik/AI are written on the 1/3-octave table they were tuned on, for this car (Infinity system,
         // SUV cabin): 4–5 kHz stays ≤ +0,5 dB (A-pillar tweeters and windscreen glare), 250–315 Hz is never boosted
-        // (door-panel boxiness). M2Y is the user's own Flat Equalizer setting (see fromFlat); Konuşma is an octave curve.
+        // (door-panel boxiness). M2Y is the user's own setting saved in the car (28.10.2026); Konuşma is an octave curve.
         private fun third(vararg from25Hz: Float) = EqSettings(fromLegacyThird(from25Hz.toList()))
-        private val FLAT_CUTOFFS = floatArrayOf(31.25f, 62.5f, 145f, 250f, 500f, 1000f, 2000f, 4000f, 8000f, 16000f) // before PRESETS
         val PRESETS: Map<String, EqSettings> = linkedMapOf(
-            // the Flat curve's bands; bass and loudness set by the user (Flat would give +3 / +7 dB)
-            "M2Y" to fromFlat(listOf(2f, 3f, 2f, -1f, -2f, 0f, 1f, 2f, 2f, 1f), bassPercent = 20f, loudnessPercent = 35f)
-                .copy(bassDb = 2.5f, loudnessDb = 6.8f),
+            // the user's "M2Y" preset as saved in the car (octave layout, Strong, surround 5 %)
+            "M2Y" to EqSettings(
+                listOf(2.5f, 2.5f, 2f, -.5f, -2f, 0f, 1.5f, 2f, 2f, 1f),
+                bassDb = 1f, loudnessDb = 1.5f, bassHz = 75f, surround = .05f, headroom = Headroom.STRONG,
+            ),
             REFERENCE_PRESET to FLAT,
             // "AI": transparent calibration for the SEAL U Infinity system (boot subwoofer, 4 door woofers, centre mid,
             // 4 tweeters) in a closed SUV cabin: gentle 40–80 Hz punch, 250–400 Hz boxiness cut, 2–2,5 kHz vocal clarity,

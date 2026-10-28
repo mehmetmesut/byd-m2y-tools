@@ -10,7 +10,7 @@
   <img alt="licence" src="https://img.shields.io/github/license/mehmetmesut/byd-m2y-tools?color=6250d6">
 </p>
 <p align="center">
-  <a href="https://github.com/mehmetmesut/byd-m2y-tools/releases/download/1.25.07.68.2/M2YTools_1.25.07.68.2.apk"><b>⬇ Download APK (6.2 MB)</b></a> ·
+  <a href="https://github.com/mehmetmesut/byd-m2y-tools/releases/download/1.25.07.68.3/M2YTools_1.25.07.68.3.apk"><b>⬇ Download APK (6.2 MB)</b></a> ·
   <a href="https://byd.mehmetmesut.com">byd.mehmetmesut.com</a> ·
   <a href="https://github.com/mehmetmesut/byd-m2y">⭐ All M2Y apps for BYD</a>
 </p>
@@ -95,7 +95,7 @@ M2Y Tools replaces M2Y Board and M2Y EQ. Remove those first (their settings are 
 adb connect <car-ip>:5555
 adb uninstall com.m2y.board
 adb uninstall com.m2y.eq
-adb install -r M2YTools_1.25.07.68.2.apk
+adb install -r M2YTools_1.25.07.68.3.apk
 adb shell ime enable com.m2y.tools/helium314.keyboard.latin.LatinIME
 adb shell ime set com.m2y.tools/helium314.keyboard.latin.LatinIME
 ```
@@ -226,7 +226,7 @@ M2Y Tools, M2Y Board ve M2Y EQ'nun yerini alır. Önce onları kaldırın (ayarl
 adb connect <araç-ip>:5555
 adb uninstall com.m2y.board
 adb uninstall com.m2y.eq
-adb install -r M2YTools_1.25.07.68.2.apk
+adb install -r M2YTools_1.25.07.68.3.apk
 adb shell ime enable com.m2y.tools/helium314.keyboard.latin.LatinIME
 adb shell ime set com.m2y.tools/helium314.keyboard.latin.LatinIME
 ```
@@ -357,7 +357,7 @@ M2Y Tools заменяет M2Y Board и M2Y EQ. Сначала удалите и
 adb connect <ip-автомобиля>:5555
 adb uninstall com.m2y.board
 adb uninstall com.m2y.eq
-adb install -r M2YTools_1.25.07.68.2.apk
+adb install -r M2YTools_1.25.07.68.3.apk
 adb shell ime enable com.m2y.tools/helium314.keyboard.latin.LatinIME
 adb shell ime set com.m2y.tools/helium314.keyboard.latin.LatinIME
 ```

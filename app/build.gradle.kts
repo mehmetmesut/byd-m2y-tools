@@ -19,8 +19,8 @@ android {
         applicationId = "com.m2y.tools"
         minSdk = 28 // M2Y Tools: the EQ needs DynamicsProcessing (API 28); the head unit runs Android 10
         targetSdk = 37
-        versionCode = 125076802
-        versionName = "1.25.07.68.2"
+        versionCode = 125076803
+        versionName = "1.25.07.68.3"
         ndk {
             abiFilters.clear()
             // arm64 for the BYD head unit, x86_64 for MuMuPlayer testing

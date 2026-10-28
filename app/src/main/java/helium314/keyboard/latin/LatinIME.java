@@ -521,6 +521,9 @@ public class LatinIME extends InputMethodService implements
         mDisplayContext = KtxKt.getDisplayContext(this);
         KeyboardSwitcher.init(this);
         super.onCreate();
+        // M2Y Tools: the system keeps the default keyboard bound and restarts it, so the equalizer starts with it
+        // even when BYD's auto-start list blocks BOOT_COMPLETED or the process was killed.
+        com.m2y.eq.EqService.Companion.start(this);
 
         loadSettings();
         mClipboardHistoryManager.onCreate();
